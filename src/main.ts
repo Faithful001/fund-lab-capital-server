@@ -13,6 +13,7 @@ async function bootstrap() {
       'http://localhost:3001',
       'http://localhost:3000',
       'https://fund-lab-capital.vercel.app',
+      'https://fund-lab-capital.netlify.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
