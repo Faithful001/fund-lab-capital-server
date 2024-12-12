@@ -1,13 +1,11 @@
 import {
   BadRequestException,
-  HttpCode,
-  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Plan } from './plan.model';
-import mongoose, { Model } from 'mongoose';
+import mongoose, { Model, SortOrder } from 'mongoose';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
 import { UpdatePlanDto } from './dto/update-plan.dto';
@@ -19,7 +17,6 @@ export class PlanService {
     @InjectModel(Plan.name) private readonly planModel: Model<Plan>,
   ) {}
 
-  @HttpCode(HttpStatus.CREATED)
   public async create(createPlanDto: CreatePlanDto) {
     try {
       //   const {
@@ -43,14 +40,12 @@ export class PlanService {
     }
   }
 
-  @HttpCode(HttpStatus.OK)
-  public async get(id?: string) {
+  public async get(id?: string, desc: 'true' | 'false' = 'true') {
     try {
-      if (!mongoose.isValidObjectId(id)) {
-        throw new BadRequestException('Invalid id provided');
-      }
-
       if (id) {
+        if (!mongoose.isValidObjectId(id)) {
+          throw new BadRequestException('Invalid id provided');
+        }
         const plan = await this.planModel.findOne({ _id: id }).exec();
         if (!plan) {
           return {
@@ -67,7 +62,11 @@ export class PlanService {
         };
       }
 
-      const plans = await this.planModel.findById(id).exec();
+      const sortOrder: { [key: string]: SortOrder } = {
+        createdAt: desc === 'true' ? 1 : -1,
+      };
+
+      const plans = await this.planModel.find().sort(sortOrder).exec();
       if (!plans) {
         return {
           success: true,
@@ -77,7 +76,7 @@ export class PlanService {
       }
       return {
         success: true,
-        message: `Plan retrieved`,
+        message: `All plans retrieved`,
         data: plans,
       };
     } catch (error: any) {
@@ -85,7 +84,6 @@ export class PlanService {
     }
   }
 
-  @HttpCode(HttpStatus.OK)
   public async update(id: string, body: UpdatePlanDto) {
     try {
       if (!mongoose.isValidObjectId(id)) {
@@ -107,7 +105,6 @@ export class PlanService {
     }
   }
 
-  @HttpCode(HttpStatus.OK)
   public async delete(id: string) {
     try {
       if (!mongoose.isValidObjectId(id)) {

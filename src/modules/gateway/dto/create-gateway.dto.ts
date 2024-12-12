@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateGatewayDto {
   @IsString()
@@ -10,8 +10,10 @@ export class CreateGatewayDto {
   wallet_address: string;
 
   @IsNumber()
+  @IsOptional()
   charge: number;
 
   @IsNumber()
+  @IsOptional()
   conversion_rate: number;
 }

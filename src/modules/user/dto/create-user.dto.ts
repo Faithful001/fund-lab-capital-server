@@ -19,13 +19,16 @@ export class CreateUserDto {
   @IsNotEmpty()
   email: string;
 
-  @IsPhoneNumber(null, { message: 'Invalid phone number' })
   @IsNotEmpty()
   phone_number: string;
 
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @IsString()
+  // @IsNotEmpty()
+  referral_code: string;
 
   @IsString()
   @IsNotEmpty()

@@ -2,13 +2,13 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 @Schema({ timestamps: true })
 export class Gateway {
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   name: string;
 
   @Prop({ required: true })
   wallet_address: string;
 
-  @Prop({ required: false, default: null })
+  @Prop({ required: false, default: 0 })
   charge?: number;
 
   @Prop({ required: false, default: null })

@@ -6,7 +6,7 @@ export class User {
   @Prop({ required: true })
   full_name: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   user_name: string;
 
   @Prop({ unique: true })
@@ -20,6 +20,9 @@ export class User {
 
   @Prop({ required: true })
   password: string;
+
+  @Prop({ required: true })
+  referral_code: string;
 
   @Prop({ required: true, default: 'USER' })
   @IsEnum(['USER', 'ADMIN'])

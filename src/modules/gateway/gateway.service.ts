@@ -11,6 +11,7 @@ import { Gateway } from './gateway.model';
 import mongoose, { Model } from 'mongoose';
 import { CreateGatewayDto } from './dto/create-gateway.dto';
 import { UpdateGatewayDto } from './dto/update-gateway.dto';
+import { Request } from 'express';
 
 @Injectable()
 export class GatewayService {
@@ -19,7 +20,6 @@ export class GatewayService {
     private readonly gatewayModel: Model<Gateway>,
   ) {}
 
-  @HttpCode(HttpStatus.CREATED)
   public async create(createGatewayDto: CreateGatewayDto) {
     try {
       const { name, wallet_address, charge, conversion_rate } =
@@ -50,7 +50,6 @@ export class GatewayService {
     }
   }
 
-  @HttpCode(HttpStatus.OK)
   public async get(id?: string) {
     try {
       if (id) {
@@ -87,7 +86,28 @@ export class GatewayService {
     }
   }
 
-  @HttpCode(HttpStatus.OK)
+  public async getByName(name: string) {
+    try {
+      if (!name) {
+        throw new BadRequestException(`Parameter required`);
+      }
+      // const user = this.userRequest.getUser();
+      // const user_id = req?.user.id;
+
+      const wallet = await this.gatewayModel.findOne({ name }).exec();
+      if (!wallet) {
+        throw new NotFoundException('Wallet with this name does not exist');
+      }
+      return {
+        success: true,
+        message: 'Wallet retrieved',
+        data: wallet,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
   public async update(id: string, body: UpdateGatewayDto) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -113,7 +133,6 @@ export class GatewayService {
     }
   }
 
-  @HttpCode(HttpStatus.OK)
   public async delete(id: string) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
