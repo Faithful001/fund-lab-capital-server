@@ -26,9 +26,9 @@ export class CreateUserDto {
   @IsNotEmpty()
   password: string;
 
-  @IsString()
-  // @IsNotEmpty()
-  referral_code: string;
+  // @IsString()
+  // // @IsNotEmpty()
+  // referral_code: string;
 
   @IsString()
   @IsNotEmpty()

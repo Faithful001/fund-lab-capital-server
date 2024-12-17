@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
@@ -8,6 +12,7 @@ import { Transaction } from './transaction.model';
 import { CloudinaryService } from 'src/contexts/services/cloudinary.service';
 import { UserRequestService } from 'src/contexts/services/user-request.service';
 import { Request } from 'express';
+import { Transform } from 'src/utils/transform';
 
 @Injectable()
 export class TransactionService {
@@ -60,6 +65,17 @@ export class TransactionService {
     try {
       const user_id = req.user.id;
 
+      const transactionTypes = [
+        'deposit',
+        'withdrawal',
+        'referral-bonus',
+        'first-investment-bonus',
+      ];
+
+      if (!transactionTypes.includes(type)) {
+        throw new BadRequestException('Invalid type provided');
+      }
+
       const query: Record<string, any> = { type, user_id };
       if (status) {
         query.status = status;
@@ -67,17 +83,18 @@ export class TransactionService {
 
       const transactions = await this.transactionModel
         .find(query)
+        .populate('gateway_id', 'name')
         .sort({ createdAt: -1 })
         .exec();
 
-      if (transactions.length === 0) {
-        throw new NotFoundException('No transactions found');
-      }
+      const transformedTransactions = Transform.data(transactions, [
+        ['gateway_id', 'gateway'],
+      ]);
 
       return {
         success: true,
         message: 'Transactions retrieved successfully',
-        data: transactions,
+        data: transformedTransactions,
       };
     } catch (error: any) {
       handleApplicationError(error);

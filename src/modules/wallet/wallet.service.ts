@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Wallet } from './wallet.model';
@@ -13,6 +14,11 @@ import { Gateway } from '../gateway/gateway.model';
 import { CloudinaryService } from 'src/contexts/services/cloudinary.service';
 import { Transaction } from '../transaction/transaction.model';
 import { Request } from 'express';
+import { OtpService } from '../otp/otp.service';
+import { User } from '../user/user.model';
+import { Otp } from '../otp/otp.model';
+import * as bcrypt from 'bcrypt';
+import { sendEmail } from 'src/services/send-email.service';
 
 @Injectable()
 export class WalletService {
@@ -20,8 +26,11 @@ export class WalletService {
     @InjectModel(Wallet.name) private walletModel: Model<Wallet>,
     @InjectModel(Gateway.name) private gatewayModel: Model<Gateway>,
     @InjectModel(Transaction.name) private transactionModel: Model<Transaction>,
+    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(Otp.name) private otpModel: Model<Otp>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly userRequest: UserRequestService,
+    private readonly otpService: OtpService,
   ) {}
 
   public async get(id?: string) {
@@ -124,7 +133,7 @@ export class WalletService {
       }
 
       const imageName = originalname.includes('.')
-        ? originalname.split('.')[0] // Ensure the name is split correctly
+        ? originalname.split('.')[0]
         : originalname;
 
       const { url, alt_text, public_id } =
@@ -154,19 +163,124 @@ export class WalletService {
     }
   }
 
+  public async requestWithdrawalOtp(req: Request) {
+    try {
+      const user_id = req.user.id;
+
+      const user = await this.userModel.findById(user_id);
+      if (!user) {
+        throw new NotFoundException('User does not exist');
+      }
+
+      const { otpDoc: _, stringifiedOtp } =
+        await this.otpService.createOrUpdate(req, 'withdrawal');
+
+      await sendEmail(
+        user.email,
+        'Withdrawal Otp',
+        `Your Otp for withdrawal is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
+      );
+
+      const fiveMinutes = 300000;
+      setTimeout(() => {
+        this.otpService.delete(req, 'withdrawal');
+      }, fiveMinutes);
+
+      return {
+        success: true,
+        message: `Otp sent to ${user.email}`,
+        data: null,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  public async verifyWithdrawalOtp(req: Request, otp: string) {
+    try {
+      if (!otp) {
+        throw new BadRequestException('An otp is required');
+      }
+      const user_id = req.user.id;
+
+      const otpDoc = await this.otpModel
+        .findOne({
+          user_id,
+          purpose: 'withdrawal',
+        })
+        .exec();
+
+      if (!otpDoc) {
+        throw new NotFoundException('Invalid otp provided');
+      }
+
+      const comparedOtp = await bcrypt.compare(otp, otpDoc.otp);
+
+      if (!comparedOtp) {
+        throw new BadRequestException('Invalid otp provided');
+      }
+
+      return {
+        success: true,
+        message: 'Otp verified successfully',
+        data: null,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
   public async withdraw(
     req: Request,
+    otp: string,
     amount: number,
+    gateway_name: string,
     wallet_name: string,
     user_wallet_address: string,
-    otp?: string,
+    password: string,
   ) {
     try {
-      if (!amount || !wallet_name) {
+      if (
+        !otp ||
+        !amount ||
+        !gateway_name ||
+        !wallet_name ||
+        !user_wallet_address ||
+        !password
+      ) {
         throw new BadRequestException('All fields are required');
       }
 
+      if (amount <= 0) {
+        throw new BadRequestException('Amount must be a positive integer');
+      }
+
       const user_id = req.user.id;
+
+      const otpDoc = await this.otpModel.findOne({
+        user_id,
+        purpose: 'withdrawal',
+      });
+
+      if (!otpDoc) {
+        throw new NotFoundException('Invalid otp provided');
+      }
+
+      const comparedOtp = await bcrypt.compare(otp, otpDoc.otp);
+
+      if (!comparedOtp) {
+        throw new NotFoundException('Invalid otp provided');
+      }
+
+      const gateway = await this.gatewayModel
+        .findOne({ name: gateway_name })
+        .exec();
+
+      if (!gateway) {
+        throw new NotFoundException(
+          `Gateway with name ${wallet_name} not found`,
+        );
+      }
 
       const wallet = await this.walletModel
         .findOne({ name: wallet_name })
@@ -178,13 +292,42 @@ export class WalletService {
         );
       }
 
-      this.transactionModel.create({
+      if (amount > wallet.balance) {
+        throw new BadRequestException('Insufficient balance');
+      }
+
+      if (amount < 10 || amount > 30000) {
+        throw new BadRequestException(
+          'Amount should be greater than $10 and less than $30,000',
+        );
+      }
+
+      const userDoc = await this.userModel.findById(user_id);
+
+      if (!userDoc) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const comparedPassword = await bcrypt.compare(password, userDoc.password);
+
+      if (!comparedPassword) {
+        await this.otpService.delete(req, 'withdrawal');
+        throw new UnauthorizedException('Invalid password provided');
+      }
+
+      wallet.balance -= amount;
+      wallet.save();
+
+      await this.transactionModel.create({
         amount,
-        type: 'deposit',
+        type: 'withdrawal',
         user_id,
+        gateway_id: gateway._id,
         user_wallet_address,
         wallet_id: wallet.id,
       });
+
+      await this.otpService.delete(req, 'withdrawal');
 
       return {
         success: true,

@@ -100,6 +100,7 @@ export class UserService {
       await this.walletModel.create({
         user_id: newUser.id,
         name: 'PROFIT',
+        balance: 10,
       });
 
       const { password: userPassword, ...userWithoutPassword } =
@@ -122,9 +123,13 @@ export class UserService {
       }
       const user = await this.userModel.findOne({ email }).exec();
 
+      if (!user) {
+        throw new BadRequestException('Invalid email or password');
+      }
+
       const passwordIsCorrect = await bcrypt.compare(password, user.password);
 
-      if (!user || !passwordIsCorrect) {
+      if (!passwordIsCorrect) {
         throw new BadRequestException('Invalid email or password');
       }
 

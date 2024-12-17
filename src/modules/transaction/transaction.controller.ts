@@ -32,7 +32,7 @@ export class TransactionController {
     return await this.transactionService.findOne(req, id);
   }
 
-  @Get('get/:type')
+  @Get('get-by-type/:type')
   @HttpCode(HttpStatus.OK)
   async findByType(
     @Req() req: Request,

@@ -1,11 +1,11 @@
 import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 enum ReturnType {
-  Lifetime = 'Lifetime',
+  Lifetime = 'lifetime',
 }
 
 enum ProfitWithdraw {
-  Anytime = 'Anytime',
+  Anytime = 'anytime',
 }
 
 export class CreatePlanDto {
@@ -31,13 +31,13 @@ export class CreatePlanDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsEnum(ReturnType, { message: 'return_type must be "Lifetime"' })
+  @IsEnum(ReturnType, { message: 'return_type must be "lifetime"' })
   return_type: string;
 
   @IsString()
   @IsNotEmpty()
   @IsEnum(ProfitWithdraw, {
-    message: 'profit_withdraw must be "Anytime"',
+    message: 'profit_withdraw must be "anytime"',
   })
   profit_withdraw: string;
 }

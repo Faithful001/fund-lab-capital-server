@@ -4,7 +4,7 @@ import { User } from '../user/user.model';
 
 @Schema({ timestamps: true })
 export class Wallet {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   name: string;
 
   @Prop({ required: false, default: 0 })

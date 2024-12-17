@@ -20,6 +20,7 @@ import { ReferralController } from './modules/referral/referral.controller';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { InvestmentModule } from './modules/investment/investment.module';
 import { PlanController } from './modules/plan/plan.controller';
+import { OtpModule } from './modules/otp/otp.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PlanController } from './modules/plan/plan.controller';
     ReferralModule,
     TransactionModule,
     InvestmentModule,
+    OtpModule,
   ],
   controllers: [AppController],
   providers: [AppService, UserRequestService],

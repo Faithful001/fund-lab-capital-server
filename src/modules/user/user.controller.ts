@@ -10,9 +10,9 @@ export class UserController {
   @HttpCode(HttpStatus.CREATED)
   async register(
     @Body() createUserDto: CreateUserDto,
-    @Body('referral_id') referral_id?: string,
+    @Body('referral_code') referral_code?: string,
   ) {
-    return await this.userService.register(createUserDto, referral_id);
+    return await this.userService.register(createUserDto, referral_code);
   }
 
   @Post('login')
