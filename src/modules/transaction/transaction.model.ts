@@ -23,7 +23,7 @@ enum TypeEnum {
   Deposit = 'deposit',
   Withdrawal = 'withdrawal',
   ReferralBonus = 'referral-bonus',
-  FirstInvestmentBonus = 'first-investment-bonus',
+  FirstInvestmentBonus = 'investment',
 }
 
 enum StatusEnum {
@@ -50,7 +50,7 @@ export class Transaction {
   @Prop({ required: true, ref: User.name })
   user_id: mongoose.Types.ObjectId;
 
-  @Prop({ required: true, ref: Wallet.name })
+  @Prop({ required: false, ref: Wallet.name, default: null })
   wallet_id: mongoose.Types.ObjectId;
 
   @Prop({ required: false, ref: Gateway.name, default: null })

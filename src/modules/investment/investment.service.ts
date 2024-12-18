@@ -14,6 +14,10 @@ import { checkIfDocumentExists } from 'src/utils/checkIfDocumentExists.util';
 import { Gateway } from '../gateway/gateway.model';
 import { Plan } from '../plan/plan.model';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
+import { Transaction } from '../transaction/transaction.model';
+import { Wallet } from '../wallet/wallet.model';
+import { User } from '../user/user.model';
+import { Transform } from 'src/utils/transform';
 
 @Injectable()
 export class InvestmentService {
@@ -22,6 +26,10 @@ export class InvestmentService {
     private readonly investmentModel: Model<Investment>,
     @InjectModel(Gateway.name) private readonly gatewayModel: Model<Gateway>,
     @InjectModel(Plan.name) private readonly planModel: Model<Plan>,
+    @InjectModel(Transaction.name)
+    private readonly transactionModel: Model<Transaction>,
+    @InjectModel(Wallet.name) private readonly walletModel: Model<Wallet>,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
@@ -30,18 +38,38 @@ export class InvestmentService {
     file: Express.Multer.File,
     createInvestmentDto: CreateInvestmentDto,
   ) {
-    const { amount, gateway_id, plan_id } = createInvestmentDto;
+    const { amount, gateway, plan, wallet } = createInvestmentDto;
     const user_id = req.user?.id;
 
+    // Validate that a file was uploaded
     if (!file) {
       throw new BadRequestException('Image file is required');
     }
 
     try {
-      const [gateway, plan] = await Promise.all([
-        checkIfDocumentExists<Gateway>(this.gatewayModel, gateway_id),
-        checkIfDocumentExists<Plan>(this.planModel, plan_id),
-      ]);
+      const planDoc = await this.planModel.findOne({ name: plan });
+      if (!planDoc) {
+        throw new NotFoundException('Plan not found');
+      }
+
+      const gatewayDoc = await this.gatewayModel.findOne({ name: gateway });
+      if (!gatewayDoc) {
+        throw new NotFoundException('Gateway not found');
+      }
+
+      let walletDoc: any;
+      if (wallet) {
+        walletDoc = await this.walletModel.findOne({ name: wallet }).exec();
+        if (!walletDoc) {
+          throw new NotFoundException(`Wallet "${wallet}" not found`);
+        }
+      }
+
+      if (!Number(amount) || Number(amount) <= 0) {
+        throw new BadRequestException(
+          'Amount must be a valid number greater than zero',
+        );
+      }
 
       const { buffer, originalname } = file;
       const imageName = originalname.includes('.')
@@ -51,10 +79,11 @@ export class InvestmentService {
       const { alt_text, public_id, url, thumbnail_url } =
         await this.cloudinaryService.uploadStream(imageName, buffer, true);
 
+      // Create the investment
       const createdInvestment = await this.investmentModel.create({
         amount: Number(amount),
-        gateway_id: gateway.id,
-        plan_id: plan.id,
+        gateway_id: gatewayDoc._id,
+        plan_id: planDoc._id,
         user_id,
         image: {
           alt_text,
@@ -64,10 +93,47 @@ export class InvestmentService {
         },
       });
 
+      const user = await this.userModel.findById(user_id).exec();
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      user.plan_id = planDoc._id;
+      await user.save();
+
+      const transactionData: any = {
+        amount: Number(amount),
+        type: 'investment',
+        user_id,
+        gateway_id: gatewayDoc._id,
+      };
+
+      if (wallet) {
+        transactionData.wallet_id = walletDoc._id;
+
+        if (walletDoc.balance < Number(amount)) {
+          throw new BadRequestException('Insufficient wallet balance');
+        }
+
+        walletDoc.balance -= Number(amount);
+        await walletDoc.save();
+      }
+
+      await this.transactionModel.create(transactionData);
+
+      // Transform the user object for the response
+      const { password, ...restUserObject } = user.toObject();
+      const transformedUser = Transform.data(restUserObject, [
+        ['plan_id', 'plan'],
+      ]);
+
       return {
         success: true,
         message: 'Investment created successfully',
-        data: createdInvestment,
+        data: {
+          investment: createdInvestment,
+          user: transformedUser,
+        },
       };
     } catch (error) {
       handleApplicationError(error);

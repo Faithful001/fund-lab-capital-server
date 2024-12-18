@@ -33,6 +33,12 @@ export class PlanController {
     return await this.planService.get(id, desc);
   }
 
+  @Get('get-by-name/:name')
+  @HttpCode(HttpStatus.OK)
+  public async getByName(@Param('name') name: string) {
+    return await this.planService.getByName(name);
+  }
+
   @Patch('update/:id')
   @HttpCode(HttpStatus.OK)
   public async update(@Param('id') id: string, updatePlanDto: UpdatePlanDto) {

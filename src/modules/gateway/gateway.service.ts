@@ -94,14 +94,14 @@ export class GatewayService {
       // const user = this.userRequest.getUser();
       // const user_id = req?.user.id;
 
-      const wallet = await this.gatewayModel.findOne({ name }).exec();
-      if (!wallet) {
-        throw new NotFoundException('Wallet with this name does not exist');
+      const gateway = await this.gatewayModel.findOne({ name }).exec();
+      if (!gateway) {
+        throw new NotFoundException('Gateway with this name does not exist');
       }
       return {
         success: true,
-        message: 'Wallet retrieved',
-        data: wallet,
+        message: 'Gateway retrieved',
+        data: gateway,
       };
     } catch (error: any) {
       handleApplicationError(error);

@@ -1,10 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { IsEnum } from 'class-validator';
+import mongoose from 'mongoose';
 
 @Schema({ timestamps: true })
 export class User {
   @Prop({ required: true })
-  full_name: string;
+  first_name: string;
+
+  @Prop({ required: true })
+  last_name: string;
 
   @Prop({ required: true, unique: true })
   user_name: string;
@@ -23,6 +27,9 @@ export class User {
 
   @Prop({ required: true })
   referral_code: string;
+
+  @Prop({ required: false, default: null, type: mongoose.Types.ObjectId })
+  plan_id: mongoose.Types.ObjectId;
 
   @Prop({ required: true, default: 'USER' })
   @IsEnum(['USER', 'ADMIN'])

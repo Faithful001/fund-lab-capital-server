@@ -1,5 +1,6 @@
-import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Req } from '@nestjs/common';
 import { ReferralService } from './referral.service';
+import { Request } from 'express';
 
 @Controller('referral')
 export class ReferralController {
@@ -7,7 +8,7 @@ export class ReferralController {
 
   @Get('get')
   @HttpCode(HttpStatus.OK)
-  get() {
-    return this.referralService.get();
+  get(@Req() req: Request) {
+    return this.referralService.get(req);
   }
 }

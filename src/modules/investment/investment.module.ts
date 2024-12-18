@@ -6,6 +6,12 @@ import { Investment, InvestmentSchema } from './investment.model';
 import { Gateway, GatewaySchema } from '../gateway/gateway.model';
 import { Plan, PlanSchema } from '../plan/plan.model';
 import { CloudinaryService } from 'src/contexts/services/cloudinary.service';
+import { Wallet, WalletSchema } from '../wallet/wallet.model';
+import {
+  Transaction,
+  TransactionSchema,
+} from '../transaction/transaction.model';
+import { User, UserSchema } from '../user/user.model';
 
 @Module({
   imports: [
@@ -13,6 +19,9 @@ import { CloudinaryService } from 'src/contexts/services/cloudinary.service';
       { name: Investment.name, schema: InvestmentSchema },
       { name: Gateway.name, schema: GatewaySchema },
       { name: Plan.name, schema: PlanSchema },
+      { name: Transaction.name, schema: TransactionSchema },
+      { name: Wallet.name, schema: WalletSchema },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [InvestmentController],

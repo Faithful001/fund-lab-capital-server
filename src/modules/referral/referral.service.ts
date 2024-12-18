@@ -3,6 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Referral } from './referral.model';
 import { Model } from 'mongoose';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
+import { Request } from 'express';
+import { Transform } from 'src/utils/transform';
 
 @Injectable()
 export class ReferralService {
@@ -10,12 +12,23 @@ export class ReferralService {
     @InjectModel(Referral.name) private readonly referralModel: Model<Referral>,
   ) {}
 
-  public async get() {
+  public async get(req: Request) {
     try {
+      const user_id = req.user.id;
       const referrals = await this.referralModel
-        .find()
+        .find({ user_id })
         .sort({ createdAt: -1 })
+        .populate('referred_user_id', 'full_name user_name country')
         .exec();
+
+      const transformedReferrals = Transform.data(referrals, [
+        ['referred_user_id', 'referred_user'],
+      ]);
+      return {
+        success: true,
+        message: 'All referrals',
+        data: transformedReferrals,
+      };
       return {
         success: true,
         message: 'All referrals',

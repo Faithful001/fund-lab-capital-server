@@ -84,6 +84,28 @@ export class PlanService {
     }
   }
 
+  public async getByName(name: string) {
+    try {
+      if (!name) {
+        throw new BadRequestException(`Parameter required`);
+      }
+      // const user = this.userRequest.getUser();
+      // const user_id = req?.user.id;
+
+      const plan = await this.planModel.findOne({ name }).exec();
+      if (!plan) {
+        throw new NotFoundException('Plan with this name does not exist');
+      }
+      return {
+        success: true,
+        message: 'Plan retrieved',
+        data: plan,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
   public async update(id: string, body: UpdatePlanDto) {
     try {
       if (!mongoose.isValidObjectId(id)) {

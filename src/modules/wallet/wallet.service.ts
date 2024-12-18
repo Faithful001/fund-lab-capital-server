@@ -316,7 +316,7 @@ export class WalletService {
       }
 
       wallet.balance -= amount;
-      wallet.save();
+      await wallet.save();
 
       await this.transactionModel.create({
         amount,

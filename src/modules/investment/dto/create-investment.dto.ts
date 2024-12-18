@@ -38,10 +38,14 @@ export class CreateInvestmentDto {
   amount: string;
 
   @IsNotEmpty()
-  @IsMongoId()
-  plan_id: string;
+  @IsString()
+  plan: string;
 
   @IsNotEmpty()
-  @IsMongoId()
-  gateway_id: string;
+  @IsString()
+  gateway: string;
+
+  @IsOptional()
+  @IsString()
+  wallet: string;
 }

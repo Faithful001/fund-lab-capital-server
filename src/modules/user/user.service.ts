@@ -18,6 +18,7 @@ import { JwtPayload } from 'jsonwebtoken';
 import { Wallet } from '../wallet/wallet.model';
 import { Referral } from '../referral/referral.model';
 import { Generate } from 'src/utils/generate';
+import { Transform } from 'src/utils/transform';
 config();
 
 @Injectable()
@@ -38,42 +39,50 @@ export class UserService {
     referrer_referral_code?: string,
   ) {
     try {
-      const userExists = await this.userModel.findOne({
+      // Check if the email already exists
+      const userExists = await this.userModel.exists({
         email: createUserDto.email,
       });
       if (userExists) {
         throw new ConflictException('Email already in use');
       }
 
+      // Validate phone number length
       if (createUserDto.phone_number.length > 19) {
         throw new BadRequestException('Incorrect phone number provided');
       }
-      const strongPassword = validator.isStrongPassword(createUserDto.password);
 
-      if (!strongPassword) {
+      // Validate password strength
+      if (!validator.isStrongPassword(createUserDto.password)) {
         throw new BadRequestException(
-          'Password must contain atleast lowercase and uppercase alphabets, a number, and a symbol',
+          'Password must contain at least one lowercase and uppercase letter, a number, and a symbol',
         );
       }
 
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
+      // Hash the password
+      const hashedPassword = await bcrypt.hash(
+        createUserDto.password.trim(),
+        10,
+      );
 
-      for (const key in createUserDto) {
+      // Trim all string fields in the DTO
+      Object.keys(createUserDto).forEach((key) => {
         if (typeof createUserDto[key] === 'string') {
           createUserDto[key] = createUserDto[key].trim();
         }
-      }
+      });
 
+      // Generate a referral code
       const generatedReferralCode = Generate.randomString('alphanumeric', 6);
 
-      // Create a new user
+      // Create a new user instance
       const newUser = new this.userModel({
         ...createUserDto,
         referral_code: generatedReferralCode,
         password: hashedPassword,
       });
 
+      // Handle referrer referral code logic
       if (referrer_referral_code) {
         const referrer = await this.userModel.findOne({
           referral_code: referrer_referral_code,
@@ -81,35 +90,35 @@ export class UserService {
         if (!referrer) {
           throw new NotFoundException('Referrer user not found');
         }
+
         await this.referralModel.create({
-          referral_code: referrer_referral_code,
-          referred_user_id: newUser.id,
+          user_id: referrer._id,
+          referred_user_id: newUser._id,
         });
       }
 
-      const token = this.generateToken(newUser.id);
-
-      // Save user to the database
+      // Save the user to the database
       await newUser.save();
 
-      await this.walletModel.create({
-        user_id: newUser.id,
-        name: 'MAIN',
-      });
+      await newUser.populate('plan_id', 'name');
 
-      await this.walletModel.create({
-        user_id: newUser.id,
-        name: 'PROFIT',
-        balance: 10,
-      });
+      await this.walletModel.insertMany([
+        { user_id: newUser.id, name: 'MAIN' },
+        { user_id: newUser.id, name: 'PROFIT', balance: 10 },
+      ]);
 
-      const { password: userPassword, ...userWithoutPassword } =
-        newUser.toObject();
+      // Generate a token
+      const token = this.generateToken(newUser.id);
+
+      const { password, ...userWithoutPassword } = newUser.toObject();
+      const transformedUser = Transform.data(userWithoutPassword, [
+        ['plan_id', 'plan'],
+      ]);
 
       return {
         success: true,
         message: 'User registered successfully',
-        data: { user: userWithoutPassword, token },
+        data: { user: transformedUser, token },
       };
     } catch (error: any) {
       handleApplicationError(error);
@@ -121,26 +130,33 @@ export class UserService {
       if (!email || !password) {
         throw new BadRequestException('All fields are required');
       }
-      const user = await this.userModel.findOne({ email }).exec();
+
+      // Find user by email and populate `plan_id`
+      const user = await this.userModel
+        .findOne({ email })
+        .populate('plan_id', 'name')
+        .exec();
 
       if (!user) {
         throw new BadRequestException('Invalid email or password');
       }
 
-      const passwordIsCorrect = await bcrypt.compare(password, user.password);
-
-      if (!passwordIsCorrect) {
+      const isPasswordCorrect = await bcrypt.compare(password, user.password);
+      if (!isPasswordCorrect) {
         throw new BadRequestException('Invalid email or password');
       }
 
       const token = this.generateToken(user.id);
 
-      const { password: _, ...restUserObject } = user.toObject();
+      const { password: _, ...userWithoutPassword } = user.toObject();
+      const transformedUser = Transform.data(userWithoutPassword, [
+        ['plan_id', 'plan'],
+      ]);
 
       return {
         success: true,
         message: 'User logged in successfully',
-        data: { user: restUserObject, token },
+        data: { user: transformedUser, token },
       };
     } catch (error: any) {
       handleApplicationError(error);
