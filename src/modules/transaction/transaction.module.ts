@@ -6,12 +6,16 @@ import { memoryStorage } from 'multer';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Transaction, TransactionSchema } from './transaction.model';
 import { UserRequestService } from 'src/contexts/services/user-request.service';
+import { UserModule } from '../user/user.module';
+import { AdminModule } from '../admin/admin.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Transaction.name, schema: TransactionSchema },
     ]),
+    UserModule,
+    AdminModule,
     MulterModule.register({
       storage: memoryStorage(),
       fileFilter: (req, file, cb) => {

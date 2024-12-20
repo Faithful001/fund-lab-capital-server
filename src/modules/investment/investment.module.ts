@@ -5,13 +5,15 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Investment, InvestmentSchema } from './investment.model';
 import { Gateway, GatewaySchema } from '../gateway/gateway.model';
 import { Plan, PlanSchema } from '../plan/plan.model';
-import { CloudinaryService } from 'src/contexts/services/cloudinary.service';
+import { CloudinaryService } from 'src/services/cloudinary.service';
 import { Wallet, WalletSchema } from '../wallet/wallet.model';
 import {
   Transaction,
   TransactionSchema,
 } from '../transaction/transaction.model';
 import { User, UserSchema } from '../user/user.model';
+import { UserModule } from '../user/user.module';
+import { AdminModule } from '../admin/admin.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { User, UserSchema } from '../user/user.model';
       { name: Wallet.name, schema: WalletSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    UserModule,
+    AdminModule,
   ],
   controllers: [InvestmentController],
   providers: [InvestmentService, CloudinaryService],

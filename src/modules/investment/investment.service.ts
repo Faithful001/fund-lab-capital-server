@@ -9,7 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Investment } from './investment.model';
 import { Model } from 'mongoose';
 import { Request } from 'express';
-import { CloudinaryService } from 'src/contexts/services/cloudinary.service';
+import { CloudinaryService } from 'src/services/cloudinary.service';
 import { checkIfDocumentExists } from 'src/utils/checkIfDocumentExists.util';
 import { Gateway } from '../gateway/gateway.model';
 import { Plan } from '../plan/plan.model';
@@ -18,6 +18,14 @@ import { Transaction } from '../transaction/transaction.model';
 import { Wallet } from '../wallet/wallet.model';
 import { User } from '../user/user.model';
 import { Transform } from 'src/utils/transform';
+
+enum StatusEnum {
+  Pending = 'pending',
+  Completed = 'completed',
+  Stopped = 'stopped',
+  Active = 'active',
+  Declined = 'declined',
+}
 
 @Injectable()
 export class InvestmentService {
@@ -140,16 +148,31 @@ export class InvestmentService {
     }
   }
 
-  async findAll(req: Request) {
+  async findAll(req: Request, status?: StatusEnum) {
     try {
       const user_id = req.user.id;
+
+      // Ensure the status provided is valid
+      if (status && !Object.values(StatusEnum).includes(status)) {
+        throw new BadRequestException('Invalid status provided');
+      }
+
+      // Build query object
+      const investmentModelBuilder: Record<string, any> = { user_id };
+      if (status) {
+        investmentModelBuilder.status = status;
+      }
+
+      // Query investments
       const investments = await this.investmentModel
-        .find({ user_id: user_id })
+        .find(investmentModelBuilder)
         .sort({ createdAt: -1 })
         .exec();
+
+      // Return the result
       return {
         success: true,
-        message: 'Investments retrieved',
+        message: 'Investments retrieved successfully',
         data: investments,
       };
     } catch (error: any) {
@@ -166,6 +189,41 @@ export class InvestmentService {
       return {
         success: true,
         message: 'Invesment retrieved',
+        data: investment,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  /**
+   *Admin method to update an investment status
+   *   @param req - Request object from express
+   *   @param id - wallet id
+   **/
+  async updateStatus(req: Request, id: string, status: StatusEnum) {
+    try {
+      if (!id || !status) {
+        throw new BadRequestException(
+          'ID route parameter and status query parameter are required',
+        );
+      }
+
+      if (Object.values(StatusEnum).includes(status)) {
+        throw new BadRequestException('Invalid status provided');
+      }
+
+      const user_id = req.user;
+      const investment = await this.investmentModel
+        .findOneAndUpdate({ id, user_id }, { status }, { new: true })
+        .exec();
+      if (!investment) {
+        throw new NotFoundException('Investment not found');
+      }
+
+      return {
+        success: true,
+        message: 'Investment updated successfully',
         data: investment,
       };
     } catch (error: any) {

@@ -9,14 +9,10 @@ import { JwtPayload } from 'jsonwebtoken';
 import { Model } from 'mongoose';
 import { User } from 'src/modules/user/user.model';
 import JWT from 'src/utils/jwt.util';
-import { UserRequestService } from '../services/user-request.service';
 
 @Injectable()
-export class UserIsAuthenticatedMiddleware implements NestMiddleware {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
-    private readonly userRequestService: UserRequestService, // Use userRequestService instead of userRequest
-  ) {}
+export class UserIsAuthorizedMiddleware implements NestMiddleware {
+  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
     const authorizationHeader = req.headers.authorization;
@@ -31,9 +27,9 @@ export class UserIsAuthenticatedMiddleware implements NestMiddleware {
     }
 
     try {
-      const { userId } = JWT.verifyToken(token) as JwtPayload;
+      const { id } = JWT.verifyToken(token) as JwtPayload;
 
-      const user = await this.userModel.findById(userId).select('_id id role');
+      const user = await this.userModel.findById(id).select('_id id role');
       if (!user || user.role !== 'USER') {
         throw new UnauthorizedException('User is unauthorized');
       }

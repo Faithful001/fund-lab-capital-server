@@ -1,12 +1,24 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { Roles } from 'src/decorators/roles.decorator';
+import { Role } from 'src/enums/role.enum';
+import { AuthGuard } from 'src/guards/auth.guard';
 
-@Controller('auth')
+@Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post('register')
+  @Post('auth/register')
   @HttpCode(HttpStatus.CREATED)
   async register(
     @Body() createUserDto: CreateUserDto,
@@ -15,7 +27,7 @@ export class UserController {
     return await this.userService.register(createUserDto, referral_code);
   }
 
-  @Post('login')
+  @Post('auth/login')
   @HttpCode(HttpStatus.OK)
   async login(
     @Body('email') email: string,
@@ -24,9 +36,17 @@ export class UserController {
     return await this.userService.login(email, password);
   }
 
-  @Post('verify-token')
+  @Post('auth/verify-token')
   @HttpCode(HttpStatus.OK)
   async verifyToken(@Body('token') token: string) {
     return await this.userService.verifyToken(token);
+  }
+
+  @Get('get')
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async findUser(@Query('amount') amount?: number) {
+    return await this.userService.findUsers(amount);
   }
 }

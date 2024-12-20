@@ -11,7 +11,7 @@ import { Model } from 'mongoose';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
 import { UserRequestService } from 'src/contexts/services/user-request.service';
 import { Gateway } from '../gateway/gateway.model';
-import { CloudinaryService } from 'src/contexts/services/cloudinary.service';
+import { CloudinaryService } from 'src/services/cloudinary.service';
 import { Transaction } from '../transaction/transaction.model';
 import { Request } from 'express';
 import { OtpService } from '../otp/otp.service';
@@ -332,6 +332,68 @@ export class WalletService {
       return {
         success: true,
         message: 'Withdrawal successful',
+        data: wallet,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  /**
+   *Admin endpoint to add to or subtract from a user's wallet balance
+   * @param operation - "add" |"subtract"
+   * @param amount - number
+   * @param user_id - string
+   * @param wallet_id - string
+   *
+   */
+  public async updateWalletBalance(
+    operation: 'add' | 'subtract',
+    amount: number,
+    user_id: string,
+    wallet_name: string,
+  ) {
+    try {
+      if (!operation || !user_id || !amount || !wallet_name) {
+        throw new BadRequestException('All fields are required');
+      }
+
+      if (amount <= 0) {
+        throw new BadRequestException('Amount must be greater than zero');
+      }
+
+      const user = await this.userModel.findById(user_id).exec();
+      if (!user) {
+        throw new NotFoundException('User with this ID does not exist');
+      }
+      const wallet = await this.walletModel
+        .findOne({ name: wallet_name, user_id })
+        .exec();
+      if (!wallet) {
+        throw new NotFoundException('Wallet with does not exist');
+      }
+
+      switch (operation) {
+        case 'add':
+          wallet.balance += amount;
+          break;
+        case 'subtract':
+          if (wallet.balance < amount) {
+            throw new BadRequestException(
+              'Insufficient wallet balance for subtraction',
+            );
+          }
+          wallet.balance -= amount;
+          break;
+        default:
+          throw new BadRequestException('Invalid operation provided');
+      }
+
+      await wallet.save();
+
+      return {
+        success: true,
+        message: 'Wallet balance updated',
         data: wallet,
       };
     } catch (error: any) {

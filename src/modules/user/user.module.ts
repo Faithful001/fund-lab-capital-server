@@ -5,6 +5,7 @@ import { UserController } from './user.controller';
 import { User, UserSchema } from './user.model';
 import { Wallet, WalletSchema } from '../wallet/wallet.model';
 import { Referral, ReferralSchema } from '../referral/referral.model';
+import { AdminModule } from '../admin/admin.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { Referral, ReferralSchema } from '../referral/referral.model';
       { name: Wallet.name, schema: WalletSchema },
       { name: Referral.name, schema: ReferralSchema },
     ]),
+    AdminModule,
   ],
   controllers: [UserController],
   providers: [UserService],

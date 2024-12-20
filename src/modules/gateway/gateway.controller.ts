@@ -8,11 +8,17 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { GatewayService } from './gateway.service';
 import { CreateGatewayDto } from './dto/create-gateway.dto';
 import { UpdateGatewayDto } from './dto/update-gateway.dto';
+import { Roles } from 'src/decorators/roles.decorator';
+import { Role } from 'src/enums/role.enum';
+import { AuthGuard } from 'src/guards/auth.guard';
 
+@Roles(Role.USER)
+@UseGuards(AuthGuard)
 @Controller('gateway')
 export class GatewayController {
   constructor(private readonly gatewayService: GatewayService) {}

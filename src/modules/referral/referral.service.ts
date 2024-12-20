@@ -29,9 +29,21 @@ export class ReferralService {
         message: 'All referrals',
         data: transformedReferrals,
       };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  public async getAll() {
+    try {
+      const referrals = await this.referralModel
+        .find()
+        .sort({ createdAt: -1 })
+        .exec();
+
       return {
         success: true,
-        message: 'All referrals',
+        message: 'All referrals retrieved',
         data: referrals,
       };
     } catch (error: any) {

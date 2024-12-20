@@ -30,7 +30,7 @@ export class UserService {
   ) {}
 
   private generateToken(payload: string) {
-    const token = JWT.createToken({ userId: payload });
+    const token = JWT.createToken({ id: payload });
     return token;
   }
 
@@ -168,8 +168,8 @@ export class UserService {
       if (!token) {
         throw new BadRequestException('Token is required');
       }
-      const { userId } = JWT.verifyToken(token) as JwtPayload;
-      const user = await this.userModel.findById(userId).exec();
+      const { id } = JWT.verifyToken(token) as JwtPayload;
+      const user = await this.userModel.findById(id).exec();
       if (!user) {
         throw new UnauthorizedException('Invalid token');
       }
@@ -177,6 +177,41 @@ export class UserService {
         success: true,
         message: 'User is authorized',
         data: null,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  /*
+   * Admin endpoint to find all user
+   */
+  public async findUsers(amount?: number) {
+    try {
+      let users: any;
+      if (amount) {
+        users = await this.userModel.find().limit(amount).exec();
+      }
+      users = await this.userModel.find();
+      return {
+        success: true,
+        message: 'All users retrieved',
+        data: users,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+  /*
+   * Admin endpoint to get the total of all documents
+   */
+  public async getTotalUsers() {
+    try {
+      const users = await this.userModel.find();
+      return {
+        success: true,
+        message: 'All users retrieved',
+        data: users,
       };
     } catch (error: any) {
       handleApplicationError(error);

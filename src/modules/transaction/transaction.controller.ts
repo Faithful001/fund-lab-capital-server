@@ -10,12 +10,18 @@ import {
   HttpStatus,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { Request } from 'express';
+import { Roles } from 'src/decorators/roles.decorator';
+import { Role } from 'src/enums/role.enum';
+import { AuthGuard } from 'src/guards/auth.guard';
 
+@Roles(Role.USER, Role.ADMIN)
+@UseGuards(AuthGuard)
 @Controller('transaction')
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
