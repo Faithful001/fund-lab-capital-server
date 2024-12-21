@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Wallet } from './wallet.model';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
 import { UserRequestService } from 'src/contexts/services/user-request.service';
 import { Gateway } from '../gateway/gateway.model';
@@ -350,12 +350,16 @@ export class WalletService {
   public async updateWalletBalance(
     operation: 'add' | 'subtract',
     amount: number,
-    user_id: string,
+    user_id: mongoose.Types.ObjectId,
     wallet_name: string,
   ) {
     try {
       if (!operation || !user_id || !amount || !wallet_name) {
         throw new BadRequestException('All fields are required');
+      }
+
+      if (!mongoose.isValidObjectId(user_id)) {
+        throw new BadRequestException('Invalid id provided');
       }
 
       if (amount <= 0) {

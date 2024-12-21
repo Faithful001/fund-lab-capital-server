@@ -18,6 +18,7 @@ import { Request } from 'express';
 import { Role } from 'src/enums/role.enum';
 import { Roles } from 'src/decorators/roles.decorator';
 import { AuthGuard } from 'src/guards/auth.guard';
+import mongoose from 'mongoose';
 
 @Controller('wallet')
 export class WalletController {
@@ -115,8 +116,8 @@ export class WalletController {
   async updateWalletBalance(
     @Body('operation') operation: 'add' | 'subtract',
     @Body('amount') amount: number,
-    user_id: string,
-    wallet_name: string,
+    @Body('user_id') user_id: mongoose.Types.ObjectId,
+    @Body('wallet_name') wallet_name: string,
   ) {
     return await this.walletService.updateWalletBalance(
       operation,
