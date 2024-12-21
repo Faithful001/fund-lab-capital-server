@@ -22,21 +22,20 @@ import { Request } from 'express';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/enums/role.enum';
 import { AuthGuard } from 'src/guards/auth.guard';
+import mongoose from 'mongoose';
 
 enum StatusEnum {
-  Pending = 'pending',
   Completed = 'completed',
   Stopped = 'stopped',
   Active = 'active',
-  Declined = 'declined',
 }
 
-@Roles(Role.USER)
-@UseGuards(AuthGuard)
 @Controller('investment')
 export class InvestmentController {
   constructor(private readonly investmentService: InvestmentService) {}
 
+  @Roles(Role.USER)
+  @UseGuards(AuthGuard)
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image'))
@@ -48,12 +47,16 @@ export class InvestmentController {
     return this.investmentService.create(req, file, createInvestmentDto);
   }
 
+  @Roles(Role.USER, Role.ADMIN)
+  @UseGuards(AuthGuard)
   @Get('get')
   @HttpCode(HttpStatus.OK)
   findAll(@Req() req: Request, status?: StatusEnum) {
     return this.investmentService.findAll(req, status);
   }
 
+  @Roles(Role.USER, Role.ADMIN)
+  @UseGuards(AuthGuard)
   @Get('get/:id')
   @HttpCode(HttpStatus.OK)
   findOne(@Param('id') id: string) {
@@ -65,11 +68,12 @@ export class InvestmentController {
   @Patch('update-status/:id')
   @HttpCode(HttpStatus.OK)
   updateStatus(
-    @Req() req: Request,
     @Param('id') id: string,
-    @Query('status') status?: StatusEnum,
+    @Query('status') status: StatusEnum,
+    @Body('user_id') user_id: mongoose.Types.ObjectId,
+    @Body('amount') amount: number,
   ) {
-    return this.investmentService.updateStatus(req, id, status);
+    return this.investmentService.updateStatus(id, status, user_id, amount);
   }
 
   @Patch('update/:id')

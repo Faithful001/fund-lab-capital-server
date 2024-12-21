@@ -19,6 +19,20 @@ import { Request } from 'express';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/enums/role.enum';
 import { AuthGuard } from 'src/guards/auth.guard';
+import mongoose from 'mongoose';
+
+enum StatusEnum {
+  Pending = 'pending',
+  Approved = 'approved',
+  Declined = 'declined',
+}
+
+enum TypeEnum {
+  Deposit = 'deposit',
+  Withdrawal = 'withdrawal',
+  ReferralBonus = 'referral-bonus',
+  InvestmentBonus = 'investment-bonus',
+}
 
 @Roles(Role.USER, Role.ADMIN)
 @UseGuards(AuthGuard)
@@ -46,6 +60,24 @@ export class TransactionController {
     @Query('status') status?: 'pending' | 'approved' | 'declined',
   ) {
     return await this.transactionService.findByType(req, type, status);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard)
+  @Patch('update-status/:id')
+  @HttpCode(HttpStatus.OK)
+  async updateStatus(
+    @Param('id') id: string,
+    @Query('status') status: StatusEnum,
+    @Body('user_id') user_id: mongoose.Types.ObjectId,
+    @Body('transaction_type') transaction_type: TypeEnum,
+  ) {
+    return await this.transactionService.updateStatus(
+      id,
+      status,
+      user_id,
+      transaction_type,
+    );
   }
 
   @Delete('delete/:id')

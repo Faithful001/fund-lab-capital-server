@@ -23,7 +23,7 @@ enum TypeEnum {
   Deposit = 'deposit',
   Withdrawal = 'withdrawal',
   ReferralBonus = 'referral-bonus',
-  FirstInvestmentBonus = 'investment',
+  InvestmentBonus = 'investment-bonus',
 }
 
 enum StatusEnum {

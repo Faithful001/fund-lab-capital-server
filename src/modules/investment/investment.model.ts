@@ -19,11 +19,9 @@ class Image {
 }
 
 enum StatusEnum {
-  Pending = 'pending',
   Completed = 'completed',
   Stopped = 'stopped',
   Active = 'active',
-  Declined = 'declined',
 }
 
 @Schema({ timestamps: true })
@@ -43,7 +41,7 @@ export class Investment {
   @Prop({ type: mongoose.Types.ObjectId, required: true, ref: Gateway.name })
   gateway_id: mongoose.Types.ObjectId;
 
-  @Prop({ enum: StatusEnum, required: false, default: StatusEnum.Pending })
+  @Prop({ enum: StatusEnum, required: false, default: StatusEnum.Active })
   status: StatusEnum;
 }
 

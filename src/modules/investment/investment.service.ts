@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,7 +8,7 @@ import { CreateInvestmentDto } from './dto/create-investment.dto';
 import { UpdateInvestmentDto } from './dto/update-investment.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Investment } from './investment.model';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { Request } from 'express';
 import { CloudinaryService } from 'src/services/cloudinary.service';
 import { checkIfDocumentExists } from 'src/utils/checkIfDocumentExists.util';
@@ -20,11 +21,9 @@ import { User } from '../user/user.model';
 import { Transform } from 'src/utils/transform';
 
 enum StatusEnum {
-  Pending = 'pending',
   Completed = 'completed',
   Stopped = 'stopped',
   Active = 'active',
-  Declined = 'declined',
 }
 
 @Injectable()
@@ -167,13 +166,22 @@ export class InvestmentService {
       const investments = await this.investmentModel
         .find(investmentModelBuilder)
         .sort({ createdAt: -1 })
+        .populate('user_id')
+        .populate('plan_id', 'name')
+        .populate('gateway_id', 'name')
         .exec();
+
+      const transformedInvestments = Transform.data(investments, [
+        ['user_id', 'user'],
+        ['plan_id', 'plan'],
+        ['gateway_id', 'gateway'],
+      ]);
 
       // Return the result
       return {
         success: true,
         message: 'Investments retrieved successfully',
-        data: investments,
+        data: transformedInvestments,
       };
     } catch (error: any) {
       handleApplicationError(error);
@@ -197,28 +205,77 @@ export class InvestmentService {
   }
 
   /**
-   *Admin method to update an investment status
-   *   @param req - Request object from express
-   *   @param id - wallet id
+   *Admin method to update an investment status, Method: POST
    **/
-  async updateStatus(req: Request, id: string, status: StatusEnum) {
+  async updateStatus(
+    id: string,
+    status: StatusEnum,
+    user_id: mongoose.Types.ObjectId,
+    amount: number,
+  ) {
     try {
       if (!id || !status) {
-        throw new BadRequestException(
-          'ID route parameter and status query parameter are required',
-        );
+        throw new BadRequestException('All fields and parameters are required');
+      }
+
+      if (!mongoose.isValidObjectId(id)) {
+        throw new BadRequestException('Invalid investment id');
       }
 
       if (Object.values(StatusEnum).includes(status)) {
         throw new BadRequestException('Invalid status provided');
       }
 
-      const user_id = req.user;
-      const investment = await this.investmentModel
-        .findOneAndUpdate({ id, user_id }, { status }, { new: true })
-        .exec();
+      if (status === StatusEnum.Completed) {
+        if (!amount || !user_id) {
+          throw new BadRequestException(
+            'Amount and user id are required for completed status',
+          );
+        }
+      }
+      // const user_id = req.user;
+      const investment = await this.investmentModel.findById(id).exec();
       if (!investment) {
         throw new NotFoundException('Investment not found');
+      }
+
+      switch (status) {
+        case StatusEnum.Completed:
+          if (!amount || !user_id) {
+            throw new BadRequestException(
+              'Amount and user id are required for completed status',
+            );
+          }
+          if (investment.status !== StatusEnum.Active) {
+            throw new BadRequestException(
+              'Only active investments can be completed',
+            );
+          }
+          investment.status = StatusEnum.Completed;
+          await investment.save();
+          const wallet = await this.walletModel.findOne({
+            user_id,
+            name: 'MAIN',
+          });
+          if (!wallet) {
+            throw new NotFoundException('wallet not found');
+          }
+          wallet.balance += amount;
+
+          break;
+        case StatusEnum.Stopped:
+          if (investment.status !== StatusEnum.Active) {
+            throw new BadRequestException(
+              'Only active investments can be completed',
+            );
+          }
+          investment.status = StatusEnum.Stopped;
+          await investment.save();
+          break;
+        default:
+          throw new ConflictException(
+            'Investments can only be completed or stopped',
+          );
       }
 
       return {
