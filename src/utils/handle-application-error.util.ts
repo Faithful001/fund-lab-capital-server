@@ -47,6 +47,13 @@ export function handleApplicationError(error: any): never {
         error: 'Not Found Error',
         // statusCode: HttpStatus.NOT_FOUND,
       });
+    case error instanceof ConflictException:
+      throw new ConflictException({
+        success: false,
+        message: error?.message,
+        error: 'Conflict Error',
+        // statusCode: HttpStatus.CONFLICT,
+      });
     case error instanceof UnauthorizedException:
       throw new UnauthorizedException({
         success: false,
@@ -57,8 +64,8 @@ export function handleApplicationError(error: any): never {
     default:
       throw new InternalServerErrorException({
         success: false,
-        message: 'An unexpected error occurred',
-        error: error?.message,
+        message: error?.message,
+        error: 'An unexpected error occurred',
         // statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       });
   }
