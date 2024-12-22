@@ -9,27 +9,27 @@ import {
 
 export function handleApplicationError(error: any): never {
   // Handle Mongoose validation errors
-  if (error.name === 'ValidationError') {
-    const messages = Object.values(error.errors).map((err: any) => err.message);
-    throw new BadRequestException({
-      success: false,
-      message: 'Validation failed',
-      error: messages,
-      // statusCode: HttpStatus.BAD_REQUEST,
-      // errors: messages,
-    });
-  }
+  // if (error.name === 'ValidationError') {
+  //   const messages = Object.values(error.errors).map((err: any) => err.message);
+  //   throw new BadRequestException({
+  //     success: false,
+  //     message: 'Validation failed',
+  //     error: messages,
+  //     // statusCode: HttpStatus.BAD_REQUEST,
+  //     // errors: messages,
+  //   });
+  // }
 
-  // Handle duplicate key errors (MongoDB unique constraint violations)
-  if (error.code === 11000) {
-    const field = Object.keys(error.keyValue)[0];
-    throw new ConflictException({
-      success: false,
-      message: `Duplicate value for field: ${field}`,
-      error: 'Conflict',
-      // statusCode: HttpStatus.CONFLICT,
-    });
-  }
+  // // Handle duplicate key errors (MongoDB unique constraint violations)
+  // if (error.code === 11000) {
+  //   const field = Object.keys(error.keyValue)[0];
+  //   throw new ConflictException({
+  //     success: false,
+  //     message: `Duplicate value for field: ${field}`,
+  //     error: 'Conflict',
+  //     // statusCode: HttpStatus.CONFLICT,
+  //   });
+  // }
 
   // Handle known exceptions and customize response
   switch (true) {
