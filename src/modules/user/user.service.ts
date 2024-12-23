@@ -19,6 +19,7 @@ import { Wallet } from '../wallet/wallet.model';
 import { Referral } from '../referral/referral.model';
 import { Generate } from 'src/utils/generate';
 import { Transform } from 'src/utils/transform';
+import { Transaction } from '../transaction/transaction.model';
 config();
 
 @Injectable()
@@ -27,6 +28,8 @@ export class UserService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Wallet.name) private readonly walletModel: Model<Wallet>,
     @InjectModel(Referral.name) private readonly referralModel: Model<Referral>,
+    @InjectModel(Transaction.name)
+    private readonly transactionModel: Model<Transaction>,
   ) {}
 
   private generateToken(payload: string | mongoose.Types.ObjectId) {
@@ -94,6 +97,11 @@ export class UserService {
         await this.referralModel.create({
           user_id: referrer._id,
           referred_user_id: newUser._id,
+        });
+
+        await this.transactionModel.create({
+          amount: 5,
+          type: 'referral-bonus',
         });
       }
 
