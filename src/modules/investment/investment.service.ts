@@ -86,6 +86,17 @@ export class InvestmentService {
       const { alt_text, public_id, url, thumbnail_url } =
         await this.cloudinaryService.uploadStream(imageName, buffer, true);
 
+      const investmentHasBeenMadeBefore = await this.investmentModel.findOne({
+        user_id,
+      });
+      if (!investmentHasBeenMadeBefore) {
+        await this.transactionModel.create({
+          user_id,
+          amount: 5,
+          type: 'first-trading-bonus',
+        });
+      }
+
       // Create the investment
       const createdInvestment = await this.investmentModel.create({
         amount: Number(amount),

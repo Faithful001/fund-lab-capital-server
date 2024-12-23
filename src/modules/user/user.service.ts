@@ -100,6 +100,7 @@ export class UserService {
         });
 
         await this.transactionModel.create({
+          user_id: referrer._id,
           amount: 5,
           type: 'referral-bonus',
         });

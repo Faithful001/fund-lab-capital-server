@@ -31,7 +31,8 @@ enum TypeEnum {
   Deposit = 'deposit',
   Withdrawal = 'withdrawal',
   ReferralBonus = 'referral-bonus',
-  InvestmentBonus = 'investment-bonus',
+  Investment = 'investment',
+  FirstTradingBonus = 'first-trading-bonus',
 }
 
 @Roles(Role.USER, Role.ADMIN)

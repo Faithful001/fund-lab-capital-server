@@ -25,7 +25,8 @@ enum TypeEnum {
   Deposit = 'deposit',
   Withdrawal = 'withdrawal',
   ReferralBonus = 'referral-bonus',
-  InvestmentBonus = 'investment-bonus',
+  Investment = 'investment',
+  FirstTradingBonus = 'first-trading-bonus',
 }
 
 @Injectable()
@@ -152,7 +153,8 @@ export class TransactionService {
 
         switch (transaction_type) {
           case TypeEnum.Deposit:
-          case TypeEnum.InvestmentBonus:
+          case TypeEnum.Investment:
+          case TypeEnum.FirstTradingBonus:
           case TypeEnum.ReferralBonus:
             transaction.amount += wallet.balance;
             break;
