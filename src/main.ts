@@ -13,7 +13,7 @@ async function bootstrap() {
       'http://localhost:3001',
       'http://localhost:3000',
       'https://fund-lab-capital.vercel.app',
-      'https://www.fundlabcapital.com/',
+      'https://www.fundlabcapital.com',
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
