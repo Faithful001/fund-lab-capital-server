@@ -23,7 +23,6 @@ export class OtpService {
   }> {
     try {
       const otp = Math.floor(100000 + Math.random() * 900000);
-      console.log('otp', otp);
       const hashedOtp = await bcrypt.hash(otp.toString(), 10);
       return { stringifiedOtp: otp.toString(), hashedOtp };
     } catch (error) {
@@ -39,7 +38,7 @@ export class OtpService {
     purpose: 'forgot-password' | 'withdrawal',
   ): Promise<OtpDocument> {
     try {
-      const user_id = req.user.id;
+      const user_id = req.user._id;
       const otpDoc = await this.otpModel.findOne({
         purpose,
         user_id: user_id,
@@ -81,11 +80,11 @@ export class OtpService {
     purpose: 'forgot-password' | 'withdrawal',
   ): Promise<{ otpDoc: OtpDocument; stringifiedOtp: string }> {
     try {
-      if (!req.user || !req.user.id) {
+      if (!req.user || !req.user._id) {
         throw new UnauthorizedException('User is not authenticated.');
       }
 
-      const user_id = req.user.id;
+      const user_id = req.user._id;
       const { stringifiedOtp, hashedOtp } = await this.generateOtp();
 
       let otpDoc = await this.otpModel.findOne({
@@ -121,7 +120,7 @@ export class OtpService {
     purpose: 'forgot-password' | 'withdrawal',
   ): Promise<OtpDocument> {
     try {
-      const user_id = req.user.id;
+      const user_id = req.user._id;
       const otpDoc = await this.otpModel.findOneAndDelete({
         purpose,
         user_id: user_id,

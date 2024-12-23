@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { User } from './user.model';
 import * as bcrypt from 'bcrypt';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
@@ -29,7 +29,7 @@ export class UserService {
     @InjectModel(Referral.name) private readonly referralModel: Model<Referral>,
   ) {}
 
-  private generateToken(payload: string) {
+  private generateToken(payload: string | mongoose.Types.ObjectId) {
     const token = JWT.createToken({ id: payload });
     return token;
   }
@@ -88,7 +88,7 @@ export class UserService {
           referral_code: referrer_referral_code,
         });
         if (!referrer) {
-          throw new NotFoundException('Referrer user not found');
+          throw new NotFoundException('Invalid referral code');
         }
 
         await this.referralModel.create({
@@ -103,12 +103,12 @@ export class UserService {
       await newUser.populate('plan_id', 'name');
 
       await this.walletModel.insertMany([
-        { user_id: newUser.id, name: 'MAIN' },
-        { user_id: newUser.id, name: 'PROFIT', balance: 10 },
+        { user_id: newUser._id, name: 'MAIN' },
+        { user_id: newUser._id, name: 'PROFIT', balance: 10 },
       ]);
 
       // Generate a token
-      const token = this.generateToken(newUser.id);
+      const token = this.generateToken(newUser._id);
 
       const { password, ...userWithoutPassword } = newUser.toObject();
       const transformedUser = Transform.data(userWithoutPassword, [
@@ -146,7 +146,7 @@ export class UserService {
         throw new BadRequestException('Invalid email or password');
       }
 
-      const token = this.generateToken(user.id);
+      const token = this.generateToken(user._id);
 
       const { password: _, ...userWithoutPassword } = user.toObject();
       const transformedUser = Transform.data(userWithoutPassword, [

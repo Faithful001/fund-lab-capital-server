@@ -38,7 +38,7 @@ export class TransactionService {
 
   async findAll(req: Request) {
     try {
-      const user_id = req?.user.id;
+      const user_id = req?.user._id;
       const transactions = await this.transactionModel
         .find({ user_id })
         .sort({ createdAt: -1 })
@@ -56,7 +56,7 @@ export class TransactionService {
 
   async findOne(req: Request, id: string) {
     try {
-      const user_id = req.user.id;
+      const user_id = req.user._id;
       const transaction = await this.transactionModel
         .findOne({ id, user_id })
         .exec();
@@ -77,7 +77,7 @@ export class TransactionService {
     status?: 'pending' | 'approved' | 'declined',
   ) {
     try {
-      const user_id = req.user.id;
+      const user_id = req.user._id;
 
       const transactionTypes = [
         'deposit',

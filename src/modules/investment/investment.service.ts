@@ -46,7 +46,7 @@ export class InvestmentService {
     createInvestmentDto: CreateInvestmentDto,
   ) {
     const { amount, gateway, plan, wallet } = createInvestmentDto;
-    const user_id = req.user?.id;
+    const user_id = req.user?._id;
 
     // Validate that a file was uploaded
     if (!file) {
@@ -149,7 +149,7 @@ export class InvestmentService {
 
   async findAll(req: Request, status?: StatusEnum) {
     try {
-      const user_id = req.user.id;
+      const user_id = req.user._id;
 
       // Ensure the status provided is valid
       if (status && !Object.values(StatusEnum).includes(status)) {

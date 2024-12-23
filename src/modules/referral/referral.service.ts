@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UseGuards } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Referral } from './referral.model';
 import { Model } from 'mongoose';
@@ -14,11 +14,11 @@ export class ReferralService {
 
   public async get(req: Request) {
     try {
-      const user_id = req.user.id;
+      const user_id = req.user._id;
       const referrals = await this.referralModel
         .find({ user_id })
         .sort({ createdAt: -1 })
-        .populate('referred_user_id', 'full_name user_name country')
+        .populate('referred_user_id', 'first_name last_name user_name')
         .exec();
 
       const transformedReferrals = Transform.data(referrals, [

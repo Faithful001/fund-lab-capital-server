@@ -18,6 +18,8 @@ import { AuthGuard } from 'src/guards/auth.guard';
 export class ReferralController {
   constructor(private readonly referralService: ReferralService) {}
 
+  @Roles(Role.USER)
+  @UseGuards(AuthGuard)
   @Get('get')
   @HttpCode(HttpStatus.OK)
   get(@Req() req: Request) {

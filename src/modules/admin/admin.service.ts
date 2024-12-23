@@ -9,7 +9,7 @@ import { UpdateAdminDto } from './dto/update-admin.dto';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
 import { InjectModel } from '@nestjs/mongoose';
 import { Admin } from './admin.model';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import JWT from 'src/utils/jwt.util';
 import { JwtPayload } from 'jsonwebtoken';
@@ -30,8 +30,8 @@ export class AdminService {
     private readonly investmentModel: Model<Investment>,
   ) {}
 
-  private generateToken(payload: string) {
-    const token = JWT.createToken({ id: payload });
+  private generateToken(payload: string | mongoose.Types.ObjectId) {
+    const token = JWT.createToken({ _id: payload });
     return token;
   }
 
@@ -64,7 +64,7 @@ export class AdminService {
 
       await newAdmin.save();
 
-      const token = this.generateToken(newAdmin.id);
+      const token = this.generateToken(newAdmin._id);
 
       return {
         success: true,
@@ -96,7 +96,7 @@ export class AdminService {
 
       const { password: _, ...restUser } = user.toObject();
 
-      const token = this.generateToken(user.id);
+      const token = this.generateToken(user._id);
 
       return {
         success: true,

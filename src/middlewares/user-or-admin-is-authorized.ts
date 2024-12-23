@@ -33,7 +33,7 @@ export class UserOrAdminIsAuthorizedMiddleware implements NestMiddleware {
     try {
       const decoded = JWT.verifyToken(token) as JwtPayload;
 
-      if (!decoded || !decoded.role || !decoded.id) {
+      if (!decoded || !decoded.role || !decoded._id) {
         throw new UnauthorizedException('Invalid token payload');
       }
 

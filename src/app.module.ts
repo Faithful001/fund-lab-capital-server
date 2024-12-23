@@ -35,23 +35,23 @@ import { AdminModule } from './modules/admin/admin.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    // Define routes excluded from UserIsAuthorizedMiddleware
-    // consumer
-    //   .apply(UserIsAuthorizedMiddleware)
-    //   .exclude(
-    //     { path: 'user/(.*)', method: RequestMethod.ALL },
-    //     // { path: 'admin/(.*)', method: RequestMethod.ALL },
-    //     { path: 'plan/(.*)', method: RequestMethod.ALL },
-    //   )
-    //   .forRoutes('*');
-    // consumer
-    //   .apply(AdminIsAuthorizedMiddleware)
-    //   // .exclude('(.*)')
-    //   .forRoutes(
-    //     { path: 'admin/get-total', method: RequestMethod.POST },
-    //     { path: 'user/get-all-users', method: RequestMethod.GET },
-    //   );
-  }
+export class AppModule {
+  // configure(consumer: MiddlewareConsumer) {
+  // Define routes excluded from UserIsAuthorizedMiddleware
+  // consumer
+  //   .apply(UserIsAuthorizedMiddleware)
+  //   .exclude(
+  //     { path: 'user/(.*)', method: RequestMethod.ALL },
+  //     // { path: 'admin/(.*)', method: RequestMethod.ALL },
+  //     { path: 'plan/(.*)', method: RequestMethod.ALL },
+  //   )
+  //   .forRoutes('*');
+  // consumer
+  //   .apply(AdminIsAuthorizedMiddleware)
+  //   // .exclude('(.*)')
+  //   .forRoutes(
+  //     { path: 'admin/get-total', method: RequestMethod.POST },
+  //     { path: 'user/get-all-users', method: RequestMethod.GET },
+  //   );
+  // }
 }

@@ -66,7 +66,10 @@ export class WalletService {
         throw new BadRequestException(`Parameter required`);
       }
       // const user = this.userRequest.getUser();
-      const user_id = req?.user.id;
+      const user_id = req?.user._id;
+
+      console.log('user_id', req.user._id);
+      // console.log('user_id', user_id);
 
       const wallet = await this.walletModel.findOne({ name, user_id }).exec();
       if (!wallet) {
@@ -114,7 +117,7 @@ export class WalletService {
       }
       const { originalname, buffer } = file;
 
-      const user_id = req.user.id;
+      const user_id = req.user._id;
 
       const gateway = await this.gatewayModel
         .findOne({ name: gateway_name })
@@ -144,13 +147,13 @@ export class WalletService {
         fee,
         type: 'deposit',
         user_id,
-        gateway_id: gateway.id,
+        gateway_id: gateway._id,
         image: {
           url,
           alt_text,
           public_id,
         },
-        wallet_id: wallet.id,
+        wallet_id: wallet._id,
       });
 
       return {
@@ -165,7 +168,7 @@ export class WalletService {
 
   public async requestWithdrawalOtp(req: Request) {
     try {
-      const user_id = req.user.id;
+      const user_id = req.user._id;
 
       const user = await this.userModel.findById(user_id);
       if (!user) {
@@ -201,7 +204,7 @@ export class WalletService {
       if (!otp) {
         throw new BadRequestException('An otp is required');
       }
-      const user_id = req.user.id;
+      const user_id = req.user._id;
 
       const otpDoc = await this.otpModel
         .findOne({
@@ -255,7 +258,7 @@ export class WalletService {
         throw new BadRequestException('Amount must be a positive integer');
       }
 
-      const user_id = req.user.id;
+      const user_id = req.user._id;
 
       const otpDoc = await this.otpModel.findOne({
         user_id,
@@ -324,7 +327,7 @@ export class WalletService {
         user_id,
         gateway_id: gateway._id,
         user_wallet_address,
-        wallet_id: wallet.id,
+        wallet_id: wallet._id,
       });
 
       await this.otpService.delete(req, 'withdrawal');

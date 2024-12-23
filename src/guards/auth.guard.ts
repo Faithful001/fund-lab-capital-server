@@ -38,14 +38,16 @@ export class AuthGuard implements CanActivate {
       const { id } = JWT.verifyToken(token) as JwtPayload;
 
       const user =
-        (await this.userModel.findById(id).select('_id id role')) ||
-        (await this.adminModel.findById(id).select('_id id role'));
+        (await this.userModel.findById(id).select('_id role')) ||
+        (await this.adminModel.findById(id).select('_id role'));
 
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
 
-      req['user'] = user;
+      // console.log('AuthGuard user:', user);
+
+      req.user = user;
 
       if (requiredRoles && !requiredRoles.includes(user.role as Role)) {
         throw new ForbiddenException('User does not have the required role');
