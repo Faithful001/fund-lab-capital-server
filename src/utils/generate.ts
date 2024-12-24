@@ -1,3 +1,5 @@
+import JWT from './jwt.util';
+
 export class Generate {
   public static randomString(
     type: 'alphabet' | 'alphanumeric',
@@ -20,5 +22,10 @@ export class Generate {
     }
 
     return result;
+  }
+
+  public static token(payload: Record<string, any>, expriresIn: string = '1d') {
+    const token = JWT.createToken(payload, expriresIn);
+    return token;
   }
 }

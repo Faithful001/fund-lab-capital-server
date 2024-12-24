@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -20,6 +21,11 @@ import { Referral } from '../referral/referral.model';
 import { Generate } from 'src/utils/generate';
 import { Transform } from 'src/utils/transform';
 import { Transaction } from '../transaction/transaction.model';
+import { sendEmail } from 'src/services/send-email.service';
+import { Token } from 'src/enums/token.enum';
+import { OtpService } from '../otp/otp.service';
+import { Request } from 'express';
+import { Otp } from '../otp/otp.model';
 config();
 
 @Injectable()
@@ -28,14 +34,16 @@ export class UserService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Wallet.name) private readonly walletModel: Model<Wallet>,
     @InjectModel(Referral.name) private readonly referralModel: Model<Referral>,
+    @InjectModel(Otp.name) private readonly otpModel: Model<Otp>,
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
+    private readonly otpService: OtpService,
   ) {}
 
-  private generateToken(payload: string | mongoose.Types.ObjectId) {
-    const token = JWT.createToken({ id: payload });
-    return token;
-  }
+  // private generateToken(payload: string | mongoose.Types.ObjectId) {
+  //   const token = JWT.createToken({ id: payload });
+  //   return token;
+  // }
 
   public async register(
     createUserDto: CreateUserDto,
@@ -81,6 +89,7 @@ export class UserService {
       // Create a new user instance
       const newUser = new this.userModel({
         ...createUserDto,
+        email: createUserDto.email.toLowerCase(),
         referral_code: generatedReferralCode,
         password: hashedPassword,
       });
@@ -117,17 +126,117 @@ export class UserService {
       ]);
 
       // Generate a token
-      const token = this.generateToken(newUser._id);
+      // const token = this.generateToken(newUser._id);
+      const { otpDoc: _, stringifiedOtp } =
+        await this.otpService.createOrUpdate(
+          newUser._id,
+          'account-verification',
+        );
+
+      await sendEmail({
+        email: newUser.email,
+        subject: 'Account verification OTP',
+        message: `Your Otp for verification is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
+      });
+
+      const fiveMinutes = 300000;
+      setTimeout(() => {
+        this.otpService.delete(newUser._id, 'account-verification');
+      }, fiveMinutes);
 
       const { password, ...userWithoutPassword } = newUser.toObject();
-      const transformedUser = Transform.data(userWithoutPassword, [
-        ['plan_id', 'plan'],
-      ]);
+      // const transformedUser = Transform.data(userWithoutPassword, [
+      //   ['plan_id', 'plan'],
+      // ]);
 
       return {
         success: true,
         message: 'User registered successfully',
-        data: { user: transformedUser, token },
+        data: { user_id: userWithoutPassword._id },
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  public async requestAccountVerificationOtp(user_id: mongoose.Types.ObjectId) {
+    try {
+      if (!user_id) {
+        throw new BadRequestException('The user_id field is required');
+      }
+
+      if (!mongoose.isValidObjectId(user_id)) {
+        throw new BadRequestException('Invalid user_id provided');
+      }
+
+      const user = await this.userModel.findById(user_id).exec();
+      if (!user) {
+        throw new NotFoundException('User does not exist');
+      }
+
+      const { otpDoc: _, stringifiedOtp } =
+        await this.otpService.createOrUpdate(user._id, 'account-verification');
+
+      await sendEmail({
+        email: user.email,
+        subject: 'Account verification OTP',
+        message: `Your Otp for verification is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
+      });
+
+      const fiveMinutes = 300000;
+      setTimeout(() => {
+        this.otpService.delete(user._id, 'account-verification');
+      }, fiveMinutes);
+
+      return {
+        success: true,
+        message: 'OTP sent successfully',
+        data: null,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  public async verifyAccount(otp: string, user_id: mongoose.Types.ObjectId) {
+    try {
+      if (!otp || !user_id) {
+        throw new BadRequestException(
+          'The otp and user_id fields are required',
+        );
+      }
+
+      if (!mongoose.isValidObjectId(user_id)) {
+        throw new BadRequestException('Invalid user_id provided');
+      }
+
+      const user = await this.userModel.findById(user_id);
+      if (!user) {
+        throw new NotFoundException('User does not exist');
+      }
+
+      const otpDoc = await this.otpModel.findOne({
+        // otp,
+        user_id,
+        purpose: 'account-verification',
+      });
+      const comparedOtp = await bcrypt.compare(otp, otpDoc.otp);
+
+      if (!otpDoc) {
+        throw new UnauthorizedException('Incorrect otp provided');
+      }
+
+      if (!comparedOtp) {
+        throw new UnauthorizedException('Incorrect otp provided');
+      }
+
+      user.verified = true;
+      await user.save();
+
+      return {
+        success: true,
+        message: 'User verified successfully',
+        data: null,
       };
     } catch (error: any) {
       handleApplicationError(error);
@@ -155,7 +264,10 @@ export class UserService {
         throw new BadRequestException('Invalid email or password');
       }
 
-      const token = this.generateToken(user._id);
+      const token = Generate.token({
+        _id: user._id,
+        purpose: Token.AUTHORIZATION,
+      });
 
       const { password: _, ...userWithoutPassword } = user.toObject();
       const transformedUser = Transform.data(userWithoutPassword, [
@@ -177,10 +289,18 @@ export class UserService {
       if (!token) {
         throw new BadRequestException('Token is required');
       }
-      const { id } = JWT.verifyToken(token) as JwtPayload;
-      const user = await this.userModel.findById(id).exec();
+      const { _id, purpose } = JWT.verifyToken(token) as JwtPayload;
+
+      if (purpose !== Token.AUTHORIZATION) {
+        throw new UnauthorizedException('Invalid token provided');
+      }
+      const user = await this.userModel.findById(_id).exec();
       if (!user) {
         throw new UnauthorizedException('Invalid token');
+      }
+
+      if (!user.verified) {
+        throw new ForbiddenException('User is not verified');
       }
       return {
         success: true,

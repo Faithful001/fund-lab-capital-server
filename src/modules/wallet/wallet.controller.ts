@@ -19,6 +19,7 @@ import { Role } from 'src/enums/role.enum';
 import { Roles } from 'src/decorators/roles.decorator';
 import { AuthGuard } from 'src/guards/auth.guard';
 import mongoose from 'mongoose';
+import { VerificationGuard } from 'src/guards/verification.guard';
 
 @Controller('wallet')
 export class WalletController {
@@ -49,7 +50,7 @@ export class WalletController {
   }
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, VerificationGuard)
   @HttpCode(HttpStatus.OK)
   @Post('deposit')
   @UseInterceptors(FileInterceptor('image'))
@@ -70,7 +71,7 @@ export class WalletController {
   }
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, VerificationGuard)
   @HttpCode(HttpStatus.OK)
   @Post('withdraw/request-otp')
   async requestWithdrawalOtp(@Req() req: Request) {
@@ -78,7 +79,7 @@ export class WalletController {
   }
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, VerificationGuard)
   @HttpCode(HttpStatus.OK)
   @Post('withdraw/verify-otp')
   async verifyWithdrawalOtp(@Req() req: Request, @Body('otp') otp: string) {
@@ -86,7 +87,7 @@ export class WalletController {
   }
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, VerificationGuard)
   @HttpCode(HttpStatus.OK)
   @Post('withdraw')
   async withdraw(

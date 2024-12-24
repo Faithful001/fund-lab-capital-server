@@ -9,10 +9,7 @@ class JWT {
     this.JWT_SEC = JWT_SEC;
   }
 
-  public createToken(
-    payload: { [key: string]: any },
-    expiresIn: string = '2d',
-  ) {
+  public createToken(payload: Record<string, any>, expiresIn: string = '1d') {
     const token = jwt.sign(payload, this.JWT_SEC, { expiresIn });
     return token;
   }

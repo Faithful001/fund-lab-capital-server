@@ -23,6 +23,7 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/enums/role.enum';
 import { AuthGuard } from 'src/guards/auth.guard';
 import mongoose from 'mongoose';
+import { VerificationGuard } from 'src/guards/verification.guard';
 
 enum StatusEnum {
   Completed = 'completed',
@@ -35,7 +36,7 @@ export class InvestmentController {
   constructor(private readonly investmentService: InvestmentService) {}
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, VerificationGuard)
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image'))

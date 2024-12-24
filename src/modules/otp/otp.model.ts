@@ -4,8 +4,9 @@ import mongoose, { Document } from 'mongoose';
 import { User } from '../user/user.model';
 
 export enum PurposeEnum {
-  ForgotPassword = 'forgot-password',
+  ResetPassword = 'reset-password',
   Withdrawal = 'withdrawal',
+  AccountVerification = 'account-verification',
 }
 
 export enum StatusEnum {
@@ -26,7 +27,7 @@ export class Otp {
     required: true,
     type: mongoose.Schema.Types.ObjectId,
     ref: User.name,
-    unique: true,
+    // unique: true,
   })
   user_id: mongoose.Types.ObjectId;
 

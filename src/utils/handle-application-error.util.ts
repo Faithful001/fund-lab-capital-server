@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   HttpStatus,
   InternalServerErrorException,
   NotFoundException,
@@ -38,6 +39,13 @@ export function handleApplicationError(error: any): never {
         success: false,
         message: error?.message,
         error: 'Bad Request Error',
+        // statusCode: HttpStatus.BAD_REQUEST,
+      });
+    case error instanceof ForbiddenException:
+      throw new ForbiddenException({
+        success: false,
+        message: error?.message,
+        error: 'Forbidden Error',
         // statusCode: HttpStatus.BAD_REQUEST,
       });
     case error instanceof NotFoundException:

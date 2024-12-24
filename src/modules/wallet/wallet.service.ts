@@ -68,7 +68,6 @@ export class WalletService {
       // const user = this.userRequest.getUser();
       const user_id = req?.user._id;
 
-      console.log('user_id', req.user._id);
       // console.log('user_id', user_id);
 
       const wallet = await this.walletModel.findOne({ name, user_id }).exec();
@@ -176,17 +175,17 @@ export class WalletService {
       }
 
       const { otpDoc: _, stringifiedOtp } =
-        await this.otpService.createOrUpdate(req, 'withdrawal');
+        await this.otpService.createOrUpdate(user._id, 'withdrawal');
 
-      await sendEmail(
-        user.email,
-        'Withdrawal Otp',
-        `Your Otp for withdrawal is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
-      );
+      await sendEmail({
+        email: user.email,
+        subject: 'Withdrawal OTP',
+        message: `Your Otp for withdrawal is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
+      });
 
       const fiveMinutes = 300000;
       setTimeout(() => {
-        this.otpService.delete(req, 'withdrawal');
+        this.otpService.delete(user._id, 'withdrawal');
       }, fiveMinutes);
 
       return {
@@ -314,7 +313,7 @@ export class WalletService {
       const comparedPassword = await bcrypt.compare(password, userDoc.password);
 
       if (!comparedPassword) {
-        await this.otpService.delete(req, 'withdrawal');
+        await this.otpService.delete(userDoc._id, 'withdrawal');
         throw new UnauthorizedException('Invalid password provided');
       }
 
@@ -330,7 +329,7 @@ export class WalletService {
         wallet_id: wallet._id,
       });
 
-      await this.otpService.delete(req, 'withdrawal');
+      await this.otpService.delete(userDoc._id, 'withdrawal');
 
       return {
         success: true,

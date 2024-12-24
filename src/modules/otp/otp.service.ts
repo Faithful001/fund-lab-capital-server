@@ -5,9 +5,8 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Otp, OtpDocument, StatusEnum } from './otp.model';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { Request } from 'express';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
 
 @Injectable()
@@ -34,14 +33,13 @@ export class OtpService {
    * Find an existing OTP document by purpose and user ID.
    */
   private async findOtp(
-    req: Request,
-    purpose: 'forgot-password' | 'withdrawal',
+    user_id: mongoose.Types.ObjectId,
+    purpose: 'reset-password' | 'withdrawal' | 'account-verification',
   ): Promise<OtpDocument> {
     try {
-      const user_id = req.user._id;
       const otpDoc = await this.otpModel.findOne({
         purpose,
-        user_id: user_id,
+        user_id,
       });
       if (!otpDoc) {
         throw new NotFoundException(
@@ -59,7 +57,7 @@ export class OtpService {
    */
   // public async create(
   //   req: Request,
-  //   purpose: 'forgot-password' | 'withdrawal',
+  //   purpose: 'reset-password' | 'withdrawal',
   // ): Promise<{ otpDoc: OtpDocument; stringifiedOtp: string }> {
   //   const user_id = req.user.id;
   //   const { stringifiedOtp, hashedOtp } = await this.generateOtp();
@@ -76,20 +74,15 @@ export class OtpService {
    * Create a new OTP instance or update an existing OTP for the given purpose.
    */
   public async createOrUpdate(
-    req: Request,
-    purpose: 'forgot-password' | 'withdrawal',
+    user_id: mongoose.Types.ObjectId,
+    purpose: 'reset-password' | 'withdrawal' | 'account-verification',
   ): Promise<{ otpDoc: OtpDocument; stringifiedOtp: string }> {
     try {
-      if (!req.user || !req.user._id) {
-        throw new UnauthorizedException('User is not authenticated.');
-      }
-
-      const user_id = req.user._id;
       const { stringifiedOtp, hashedOtp } = await this.generateOtp();
 
       let otpDoc = await this.otpModel.findOne({
         purpose,
-        user_id: user_id,
+        user_id,
       });
 
       if (!otpDoc) {
@@ -98,7 +91,6 @@ export class OtpService {
           otp: hashedOtp,
           purpose,
           user_id,
-          status: StatusEnum.Active,
         });
       } else {
         otpDoc.otp = hashedOtp;
@@ -116,14 +108,13 @@ export class OtpService {
    * Delete an OTP for the given purpose.
    */
   public async delete(
-    req: Request,
-    purpose: 'forgot-password' | 'withdrawal',
+    user_id: mongoose.Types.ObjectId,
+    purpose: 'reset-password' | 'withdrawal' | 'account-verification',
   ): Promise<OtpDocument> {
     try {
-      const user_id = req.user._id;
       const otpDoc = await this.otpModel.findOneAndDelete({
         purpose,
-        user_id: user_id,
+        user_id,
       });
       if (!otpDoc) {
         throw new NotFoundException('OTP not found for deletion.');
@@ -138,11 +129,11 @@ export class OtpService {
    * Mark an OTP as 'used' for the given purpose.
    */
   public async markOtpAsUsed(
-    req: Request,
-    purpose: 'forgot-password' | 'withdrawal',
+    user_id: mongoose.Types.ObjectId,
+    purpose: 'reset-password' | 'withdrawal' | 'account-verification',
   ): Promise<OtpDocument> {
     try {
-      const otpDoc = await this.findOtp(req, purpose);
+      const otpDoc = await this.findOtp(user_id, purpose);
 
       otpDoc.status = StatusEnum.Used;
       await otpDoc.save();

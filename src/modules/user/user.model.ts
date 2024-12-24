@@ -34,6 +34,9 @@ export class User {
   @Prop({ required: true, default: 'USER' })
   @IsEnum(['USER', 'ADMIN'])
   role: string;
+
+  @Prop({ required: false, default: false, type: Boolean })
+  verified: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

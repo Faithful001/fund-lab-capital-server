@@ -17,6 +17,8 @@ import { Transaction } from '../transaction/transaction.model';
 import { Referral } from '../referral/referral.model';
 import { Investment } from '../investment/investment.model';
 import { User } from '../user/user.model';
+import { Generate } from 'src/utils/generate';
+import { Token } from 'src/enums/token.enum';
 
 @Injectable()
 export class AdminService {
@@ -30,10 +32,10 @@ export class AdminService {
     private readonly investmentModel: Model<Investment>,
   ) {}
 
-  private generateToken(payload: string | mongoose.Types.ObjectId) {
-    const token = JWT.createToken({ _id: payload });
-    return token;
-  }
+  // private generateToken(payload: string | mongoose.Types.ObjectId) {
+  //   const token = JWT.createToken({ _id: payload });
+  //   return token;
+  // }
 
   async register(createAdminDto: CreateAdminDto) {
     try {
@@ -64,12 +66,16 @@ export class AdminService {
 
       await newAdmin.save();
 
-      const token = this.generateToken(newAdmin._id);
+      // const token = this.generateToken(newAdmin._id);
+      // const token = Generate.token({
+      //   _id: newAdmin._id,
+      //   purpose: Token.AUTHORIZATION,
+      // });
 
       return {
         success: true,
         message: 'Admin created successfully',
-        data: { admin: restAdmin, token },
+        data: { admin: restAdmin },
       };
     } catch (error) {
       handleApplicationError(error);
@@ -96,7 +102,11 @@ export class AdminService {
 
       const { password: _, ...restUser } = user.toObject();
 
-      const token = this.generateToken(user._id);
+      // const token = this.generateToken(user._id);
+      const token = Generate.token({
+        _id: user._id,
+        purpose: Token.AUTHORIZATION,
+      });
 
       return {
         success: true,

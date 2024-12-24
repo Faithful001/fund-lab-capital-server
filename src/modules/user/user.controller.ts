@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
@@ -13,6 +14,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/enums/role.enum';
 import { AuthGuard } from 'src/guards/auth.guard';
+import { Request } from 'express';
+import mongoose from 'mongoose';
 
 @Controller('user')
 export class UserController {
@@ -25,6 +28,23 @@ export class UserController {
     @Body('referral_code') referral_code?: string,
   ) {
     return await this.userService.register(createUserDto, referral_code);
+  }
+
+  @Post('auth/verify-account')
+  @HttpCode(HttpStatus.OK)
+  async verifyAccount(
+    @Body('otp') otp: string,
+    @Body('user_id') user_id: mongoose.Types.ObjectId,
+  ) {
+    return await this.userService.verifyAccount(otp, user_id);
+  }
+
+  @Post('auth/request-verification-otp')
+  @HttpCode(HttpStatus.OK)
+  async requestAccountVerificationOtp(
+    @Body('user_id') user_id: mongoose.Types.ObjectId,
+  ) {
+    return await this.userService.requestAccountVerificationOtp(user_id);
   }
 
   @Post('auth/login')

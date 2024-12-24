@@ -1,14 +1,19 @@
 import * as nodemailer from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { config } from 'dotenv';
-import { InternalServerErrorException } from '@nestjs/common';
 config();
 
-export const sendEmail = async (
-  email: string,
-  subject: string,
-  message: string,
-) => {
+export const sendEmail = async ({
+  email,
+  subject,
+  message,
+  htmlContent,
+}: {
+  email: string;
+  subject: string;
+  message?: string | undefined;
+  htmlContent?: string | undefined;
+}) => {
   try {
     // Validate required environment variables
     if (
@@ -40,10 +45,11 @@ export const sendEmail = async (
       to: email,
       subject,
       text: message,
+      html: htmlContent || undefined, // Add HTML content if provided
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent:', info.response);
+    // console.log('Email sent:', info.response);
 
     return info.response;
   } catch (error: any) {

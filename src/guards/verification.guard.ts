@@ -1,28 +1,27 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { InjectModel } from '@nestjs/mongoose';
 import { Request } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
 import { Model } from 'mongoose';
+import { Observable } from 'rxjs';
 import { ROLES_KEY } from 'src/decorators/roles.decorator';
 import { Role } from 'src/enums/role.enum';
 import { Token } from 'src/enums/token.enum';
-import { Admin } from 'src/modules/admin/admin.model';
 import { User } from 'src/modules/user/user.model';
 import JWT from 'src/utils/jwt.util';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
+export class VerificationGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     @InjectModel(User.name) private readonly userModel: Model<User>,
-    @InjectModel(Admin.name) private readonly adminModel: Model<Admin>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -31,26 +30,28 @@ export class AuthGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    const req = context.switchToHttp().getRequest<Request>();
+    const req = context.switchToHttp().getRequest();
 
     try {
       const token = this.extractTokenFromHeader(req);
 
-      const { _id, purpose } = JWT.verifyToken(token) as JwtPayload;
+      const payload = JWT.verifyToken(token) as JwtPayload;
+      if (!payload || !payload._id || !payload.purpose) {
+        throw new UnauthorizedException('Invalid token payload');
+      }
+
+      const { _id, purpose } = payload;
 
       if (purpose !== Token.AUTHORIZATION) {
-        throw new UnauthorizedException('Invalid token provided');
+        throw new UnauthorizedException('Invalid token purpose');
       }
 
-      const user =
-        (await this.userModel.findById(_id).select('_id role')) ||
-        (await this.adminModel.findById(_id).select('_id role'));
-
+      const user = await this.userModel
+        .findById(_id)
+        .select('_id role verified');
       if (!user) {
-        throw new UnauthorizedException('User not found. Proceed to verify');
+        throw new UnauthorizedException('User not found');
       }
-
-      // console.log('AuthGuard user:', user);
 
       req.user = user;
 
@@ -58,15 +59,19 @@ export class AuthGuard implements CanActivate {
         throw new ForbiddenException('User does not have the required role');
       }
 
+      if (!user.verified) {
+        throw new ForbiddenException('User is not verified');
+      }
+
       return true;
     } catch (error) {
+      console.error('VerificationGuard error:', error);
       if (
         error.name === 'JsonWebTokenError' ||
         error.name === 'TokenExpiredError'
       ) {
         throw new UnauthorizedException('Invalid or expired token');
       }
-
       if (error instanceof ForbiddenException) {
         throw new ForbiddenException(error?.message);
       }

@@ -6,6 +6,12 @@ import { User, UserSchema } from './user.model';
 import { Wallet, WalletSchema } from '../wallet/wallet.model';
 import { Referral, ReferralSchema } from '../referral/referral.model';
 import { AdminModule } from '../admin/admin.module';
+import {
+  Transaction,
+  TransactionSchema,
+} from '../transaction/transaction.model';
+import { OtpService } from '../otp/otp.service';
+import { Otp, OtpSchema } from '../otp/otp.model';
 
 @Module({
   imports: [
@@ -13,11 +19,14 @@ import { AdminModule } from '../admin/admin.module';
       { name: User.name, schema: UserSchema },
       { name: Wallet.name, schema: WalletSchema },
       { name: Referral.name, schema: ReferralSchema },
+      { name: Otp.name, schema: OtpSchema },
+      { name: Transaction.name, schema: TransactionSchema },
+      { name: Otp.name, schema: OtpSchema },
     ]),
     AdminModule,
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [UserService, OtpService],
   exports: [MongooseModule],
 })
 export class UserModule {}
