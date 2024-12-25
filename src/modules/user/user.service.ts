@@ -332,7 +332,7 @@ export class UserService {
 
       return {
         success: true,
-        message: 'Emails sent successfully',
+        message: 'Email sent successfully',
         data: null,
       };
     } catch (error: any) {
