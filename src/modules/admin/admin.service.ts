@@ -19,6 +19,7 @@ import { Investment } from '../investment/investment.model';
 import { User } from '../user/user.model';
 import { Generate } from 'src/utils/generate';
 import { Token } from 'src/enums/token.enum';
+import { sendBulkEmails } from 'src/services/send-email.service';
 
 @Injectable()
 export class AdminService {
@@ -88,23 +89,23 @@ export class AdminService {
         throw new BadRequestException('Email and password are required');
       }
 
-      const user = await this.adminModel.findOne({ email }).exec();
+      const admin = await this.adminModel.findOne({ email }).exec();
 
-      if (!user) {
+      if (!admin) {
         throw new UnauthorizedException('Incorrect credentials provided');
       }
 
-      const comparedPassword = await bcrypt.compare(password, user.password);
+      const comparedPassword = await bcrypt.compare(password, admin.password);
 
       if (!comparedPassword) {
         throw new UnauthorizedException('Incorrect credentials provided');
       }
 
-      const { password: _, ...restUser } = user.toObject();
+      const { password: _, ...restUser } = admin.toObject();
 
       // const token = this.generateToken(user._id);
       const token = Generate.token({
-        _id: user._id,
+        _id: admin._id,
         purpose: Token.AUTHORIZATION,
       });
 
@@ -123,9 +124,9 @@ export class AdminService {
       if (!token) {
         throw new BadRequestException('Token is required');
       }
-      const { id } = JWT.verifyToken(token) as JwtPayload;
-      const user = await this.adminModel.findById(id).exec();
-      if (!user) {
+      const { _id } = JWT.verifyToken(token) as JwtPayload;
+      const admin = await this.adminModel.findById(_id).exec();
+      if (!admin) {
         throw new UnauthorizedException('Invalid token');
       }
       return {

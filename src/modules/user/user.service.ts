@@ -21,7 +21,7 @@ import { Referral } from '../referral/referral.model';
 import { Generate } from 'src/utils/generate';
 import { Transform } from 'src/utils/transform';
 import { Transaction } from '../transaction/transaction.model';
-import { sendEmail } from 'src/services/send-email.service';
+import { sendBulkEmails, sendEmail } from 'src/services/send-email.service';
 import { Token } from 'src/enums/token.enum';
 import { OtpService } from '../otp/otp.service';
 import { Request } from 'express';
@@ -305,6 +305,34 @@ export class UserService {
       return {
         success: true,
         message: 'User is authorized',
+        data: null,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  public async sendEmail(emails: string[], subject: string, message: string) {
+    try {
+      if (!emails || !subject || !message) {
+        throw new BadRequestException(
+          'The emails, subject and message fields is required',
+        );
+      }
+
+      if (!Array.isArray(emails)) {
+        throw new BadRequestException('Email should be a string array');
+      }
+
+      await sendBulkEmails({
+        emails,
+        subject,
+        message,
+      });
+
+      return {
+        success: true,
+        message: 'Emails sent successfully',
         data: null,
       };
     } catch (error: any) {

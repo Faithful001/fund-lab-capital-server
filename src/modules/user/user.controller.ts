@@ -69,4 +69,16 @@ export class UserController {
   async findUser(@Query('amount') amount?: number) {
     return await this.userService.findUsers(amount);
   }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard)
+  @Post('send-email')
+  @HttpCode(HttpStatus.OK)
+  sendEmail(
+    @Body('emails') emails: string[],
+    @Body('subject') subject: string,
+    @Body('message') message: string,
+  ) {
+    return this.userService.sendEmail(emails, subject, message);
+  }
 }
