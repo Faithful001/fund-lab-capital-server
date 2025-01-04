@@ -429,6 +429,107 @@ export class UserService {
     }
   }
 
+  public async requestResetPasswordOtp(email: string) {
+    try {
+      if (!email) {
+        throw new BadRequestException('The email field is required');
+      }
+
+      const user = await this.userModel.findOne({ email });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      const { stringifiedOtp } = await this.otpService.createOrUpdate(
+        user._id,
+        'reset-password',
+      );
+
+      await sendEmail({
+        email: user.email,
+        subject: 'Withdrawal OTP',
+        message: `Your Otp for password reset is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
+      });
+
+      const fiveMinutes = 300000;
+      setTimeout(() => {
+        this.otpService.delete(user._id, 'reset-password');
+      }, fiveMinutes);
+
+      return {
+        success: true,
+        message: 'Otp sent successfully',
+        data: { email: user.email },
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  public async verifyResetPasswordOtp(otp: string, email: string) {
+    try {
+      if (!otp || !email) {
+        throw new BadRequestException('All fields are required');
+      }
+
+      const user = await this.userModel.findOne({ email });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      const otpDoc = await this.otpModel.findOne({
+        user_id: user?._id,
+        purpose: 'reset-password',
+      });
+
+      if (!otpDoc) {
+        throw new UnauthorizedException('Incorrect otp provided');
+      }
+
+      const comparedOtp = await bcrypt.compare(otp, otpDoc.otp);
+      if (!comparedOtp) {
+        throw new UnauthorizedException('Incorrect otp provided');
+      }
+
+      const token = Generate.token({
+        _id: user._id,
+        purpose: Token.RESETPASSWORD,
+      });
+
+      return {
+        success: true,
+        message: 'Otp verified successfully',
+        data: { email: user.email, token },
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  public async resetPassword(req: Request, password: string, email: string) {
+    try {
+      const user_id = req.user._id;
+      if (!password || !email) {
+        throw new BadRequestException('All fields are required');
+      }
+
+      const user = await this.userModel.findOne({ email, _id: user_id });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user.password = hashedPassword;
+      await user.save();
+
+      return {
+        success: true,
+        message: 'Password reset successful',
+        data: null,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
   /*
    * Admin endpoint to find all user
    */

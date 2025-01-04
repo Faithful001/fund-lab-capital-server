@@ -27,6 +27,7 @@ import {
   FileInterceptor,
   FilesInterceptor,
 } from '@nestjs/platform-express';
+import { ResetPasswordGuard } from 'src/guards/reset-password.guard';
 
 @Controller('user')
 export class UserController {
@@ -113,6 +114,33 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   async verifyToken(@Body('token') token: string) {
     return await this.userService.verifyToken(token);
+  }
+
+  @Post('auth/request-reset-password-otp')
+  @HttpCode(HttpStatus.OK)
+  async requestResetPasswordOtp(@Body('email') email: string) {
+    return await this.userService.requestResetPasswordOtp(email);
+  }
+
+  @Post('auth/verify-reset-password-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyResetPasswordOtp(
+    @Body('otp') otp: string,
+    @Body('email') email: string,
+  ) {
+    return await this.userService.verifyResetPasswordOtp(otp, email);
+  }
+
+  @Roles(Role.USER)
+  @UseGuards(ResetPasswordGuard)
+  @Post('auth/reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Req() req: Request,
+    @Body('password') password: string,
+    @Body('email') email: string,
+  ) {
+    return await this.userService.resetPassword(req, password, email);
   }
 
   @Get('get-all')
