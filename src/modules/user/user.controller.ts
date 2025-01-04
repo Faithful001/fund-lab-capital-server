@@ -1,13 +1,18 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Query,
   Req,
+  UploadedFile,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -16,6 +21,12 @@ import { Role } from 'src/enums/role.enum';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { Request } from 'express';
 import mongoose from 'mongoose';
+import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+  FilesInterceptor,
+} from '@nestjs/platform-express';
 
 @Controller('user')
 export class UserController {
@@ -39,12 +50,54 @@ export class UserController {
     return await this.userService.verifyAccount(otp, user_id);
   }
 
-  @Post('auth/request-verification-otp')
+  @Roles(Role.USER)
+  @UseGuards(AuthGuard)
+  @Get('get-one')
   @HttpCode(HttpStatus.OK)
-  async requestAccountVerificationOtp(
-    @Body('user_id') user_id: mongoose.Types.ObjectId,
+  async getUser(@Req() req: Request) {
+    return await this.userService.getUser(req);
+  }
+
+  @Roles(Role.USER)
+  @UseGuards(AuthGuard)
+  @Patch('update')
+  @HttpCode(HttpStatus.OK)
+  async updateUser(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
+    return await this.userService.updateUser(req, updateUserDto);
+  }
+
+  @Roles(Role.USER)
+  @UseGuards(AuthGuard)
+  @Post('pay-for-verification')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'kyc-image', maxCount: 1 },
+      { name: 'transaction-image', maxCount: 1 },
+    ]),
+  )
+  async payForAccountVerification(
+    @Req() req: Request,
+    @UploadedFiles()
+    files: {
+      'kyc-image': Express.Multer.File[];
+      'transaction-image': Express.Multer.File[];
+    },
+    @Body('amount') amount: number,
+    @Body('gateway') gateway: string,
   ) {
-    return await this.userService.requestAccountVerificationOtp(user_id);
+    const kycFile = files['kyc-image']?.[0];
+    const transactionFile = files['transaction-image']?.[0];
+
+    return await this.userService.payForAccountVerification(
+      req,
+      {
+        kyc: kycFile,
+        transaction: transactionFile,
+      },
+      amount,
+      gateway,
+    );
   }
 
   @Post('auth/login')
@@ -62,7 +115,7 @@ export class UserController {
     return await this.userService.verifyToken(token);
   }
 
-  @Get('get')
+  @Get('get-all')
   @Roles(Role.ADMIN)
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)

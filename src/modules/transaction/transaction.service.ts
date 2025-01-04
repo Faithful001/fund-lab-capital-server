@@ -25,6 +25,7 @@ enum TypeEnum {
   Deposit = 'deposit',
   Withdrawal = 'withdrawal',
   ReferralBonus = 'referral-bonus',
+  AccountVerification = 'account-verification',
   Investment = 'investment',
   FirstTradingBonus = 'first-trading-bonus',
 }
@@ -43,12 +44,19 @@ export class TransactionService {
       const transactions = await this.transactionModel
         .find({ user_id })
         .sort({ createdAt: -1 })
+        .populate('gateway_id')
+        .populate('wallet_id')
         .exec();
+
+      const transformedTransactions = Transform.data(transactions, [
+        ['gateway_id', 'gateway'],
+        ['wallet_id', 'wallet'],
+      ]);
 
       return {
         success: true,
         message: 'All transactions retrieved',
-        data: transactions,
+        data: transformedTransactions,
       };
     } catch (error: any) {
       handleApplicationError(error);

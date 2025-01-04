@@ -119,6 +119,33 @@ export class AdminService {
     }
   }
 
+  async verifyUser(user_id: mongoose.Types.ObjectId) {
+    try {
+      if (!user_id) {
+        throw new BadRequestException('User ID is required');
+      }
+
+      const user = await this.userModel
+        .findById(new mongoose.Types.ObjectId(user_id))
+        .exec();
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      user.verified = true;
+      user.paid_for_verification = true;
+      await user.save();
+
+      return {
+        success: true,
+        message: 'User verified successfully',
+        data: null,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
   async verifyToken(token: string) {
     try {
       if (!token) {

@@ -36,7 +36,7 @@ export class InvestmentController {
   constructor(private readonly investmentService: InvestmentService) {}
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard, VerificationGuard)
+  @UseGuards(AuthGuard) //VerificationGuard was here
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image'))

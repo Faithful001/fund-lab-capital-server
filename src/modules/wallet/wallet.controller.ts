@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -41,6 +42,17 @@ export class WalletController {
     return this.walletService.getByName(req, name);
   }
 
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard)
+  @Get('get-by-user_id/:user_id')
+  @HttpCode(HttpStatus.OK)
+  getByUserId(
+    @Param('user_id') user_id: mongoose.Types.ObjectId,
+    @Query('name') name: 'MAIN' | 'PROFIT',
+  ) {
+    return this.walletService.getByUserId(user_id, name);
+  }
+
   @Roles(Role.USER, Role.ADMIN)
   @UseGuards(AuthGuard)
   @Delete('delete/:id')
@@ -50,7 +62,7 @@ export class WalletController {
   }
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard, VerificationGuard)
+  @UseGuards(AuthGuard) //VerificationGuard was here
   @HttpCode(HttpStatus.OK)
   @Post('deposit')
   @UseInterceptors(FileInterceptor('image'))
@@ -71,7 +83,7 @@ export class WalletController {
   }
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard, VerificationGuard)
+  @UseGuards(AuthGuard) //VerificationGuard was here
   @HttpCode(HttpStatus.OK)
   @Post('withdraw/request-otp')
   async requestWithdrawalOtp(@Req() req: Request) {
@@ -79,7 +91,7 @@ export class WalletController {
   }
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard, VerificationGuard)
+  @UseGuards(AuthGuard) //VerificationGuard was here
   @HttpCode(HttpStatus.OK)
   @Post('withdraw/verify-otp')
   async verifyWithdrawalOtp(@Req() req: Request, @Body('otp') otp: string) {
@@ -87,7 +99,7 @@ export class WalletController {
   }
 
   @Roles(Role.USER)
-  @UseGuards(AuthGuard, VerificationGuard)
+  @UseGuards(AuthGuard) //VerificationGuard was here
   @HttpCode(HttpStatus.OK)
   @Post('withdraw')
   async withdraw(

@@ -19,10 +19,11 @@ class Image {
   public_id: string;
 }
 
-enum TypeEnum {
+export enum TypeEnum {
   Deposit = 'deposit',
   Withdrawal = 'withdrawal',
   ReferralBonus = 'referral-bonus',
+  AccountVerification = 'account-verification',
   Investment = 'investment',
   FirstTradingBonus = 'first-trading-bonus',
 }
@@ -35,7 +36,7 @@ enum StatusEnum {
 
 @Schema({ timestamps: true })
 export class Transaction {
-  @Prop({ type: Image, default: null })
+  @Prop({ required: false, type: Image, default: null })
   image: Image;
 
   @Prop({ required: true })

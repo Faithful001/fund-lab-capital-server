@@ -12,6 +12,12 @@ import {
 } from '../transaction/transaction.model';
 import { OtpService } from '../otp/otp.service';
 import { Otp, OtpSchema } from '../otp/otp.model';
+import { CloudinaryService } from 'src/services/cloudinary.service';
+import {
+  KycDocument,
+  KycDocumentSchema,
+} from 'src/kyc-document/kyc-document.model';
+import { Gateway, GatewaySchema } from '../gateway/gateway.model';
 
 @Module({
   imports: [
@@ -22,11 +28,13 @@ import { Otp, OtpSchema } from '../otp/otp.model';
       { name: Otp.name, schema: OtpSchema },
       { name: Transaction.name, schema: TransactionSchema },
       { name: Otp.name, schema: OtpSchema },
+      { name: Gateway.name, schema: GatewaySchema },
+      { name: KycDocument.name, schema: KycDocumentSchema },
     ]),
     AdminModule,
   ],
   controllers: [UserController],
-  providers: [UserService, OtpService],
+  providers: [UserService, OtpService, CloudinaryService],
   exports: [MongooseModule],
 })
 export class UserModule {}

@@ -15,6 +15,7 @@ import { CreateAdminDto } from './dto/create-admin.dto';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Role } from 'src/enums/role.enum';
 import { AuthGuard } from 'src/guards/auth.guard';
+import mongoose from 'mongoose';
 
 @Controller('admin')
 export class AdminController {
@@ -30,6 +31,14 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   login(@Body('email') email: string, @Body('password') password: string) {
     return this.adminService.login(email, password);
+  }
+
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard)
+  @Post('verify-user')
+  @HttpCode(HttpStatus.OK)
+  verifyUser(@Body('user_id') user_id: mongoose.Types.ObjectId) {
+    return this.adminService.verifyUser(user_id);
   }
 
   @Post('auth/verify-token')

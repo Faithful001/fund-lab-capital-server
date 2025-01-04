@@ -36,6 +36,9 @@ export class User {
   role: string;
 
   @Prop({ required: false, default: false, type: Boolean })
+  paid_for_verification: boolean;
+
+  @Prop({ required: false, default: false, type: Boolean })
   verified: boolean;
 }
 

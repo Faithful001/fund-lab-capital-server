@@ -18,6 +18,8 @@ import { TransactionModule } from './modules/transaction/transaction.module';
 import { InvestmentModule } from './modules/investment/investment.module';
 import { OtpModule } from './modules/otp/otp.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { WithdrawalMessageModule } from './modules/withdrawal-message/withdrawal-message.module';
+import { KycDocumentModule } from './kyc-document/kyc-document.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { AdminModule } from './modules/admin/admin.module';
     InvestmentModule,
     OtpModule,
     AdminModule,
+    WithdrawalMessageModule,
+    KycDocumentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

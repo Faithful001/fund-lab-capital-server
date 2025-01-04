@@ -80,23 +80,18 @@ export class OtpService {
     try {
       const { stringifiedOtp, hashedOtp } = await this.generateOtp();
 
-      let otpDoc = await this.otpModel.findOne({
-        purpose,
-        user_id,
-      });
-
-      if (!otpDoc) {
-        // If no existing OTP, create a new one
-        otpDoc = await this.otpModel.create({
+      // Find and update or create the OTP document atomically
+      const otpDoc = await this.otpModel.findOneAndUpdate(
+        { user_id, purpose },
+        {
           otp: hashedOtp,
-          purpose,
-          user_id,
-        });
-      } else {
-        otpDoc.otp = hashedOtp;
-        otpDoc.status = StatusEnum.Active;
-        await otpDoc.save();
-      }
+          status: StatusEnum.Active,
+        },
+        {
+          new: true, // Return the updated document
+          upsert: true, // Create a new document if one doesn't exist
+        },
+      );
 
       return { otpDoc, stringifiedOtp };
     } catch (error) {

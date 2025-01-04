@@ -15,6 +15,10 @@ import { OtpService } from '../otp/otp.service';
 import { Otp, OtpSchema } from '../otp/otp.model';
 import { AdminModule } from '../admin/admin.module';
 import { UserModule } from '../user/user.module';
+import {
+  WithdrawalMessage,
+  WithdrawalMessageSchema,
+} from '../withdrawal-message/withdrawal-message.model';
 
 @Module({
   imports: [
@@ -23,6 +27,7 @@ import { UserModule } from '../user/user.module';
       { name: Gateway.name, schema: GatewaySchema },
       { name: Transaction.name, schema: TransactionSchema },
       { name: User.name, schema: UserSchema },
+      { name: WithdrawalMessage.name, schema: WithdrawalMessageSchema },
       { name: Otp.name, schema: OtpSchema },
     ]),
     UserModule,

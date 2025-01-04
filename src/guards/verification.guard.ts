@@ -59,7 +59,7 @@ export class VerificationGuard implements CanActivate {
         throw new ForbiddenException('User does not have the required role');
       }
 
-      if (!user.verified) {
+      if (!user.verified || !user.paid_for_verification) {
         throw new ForbiddenException('User is not verified');
       }
 

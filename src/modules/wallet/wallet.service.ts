@@ -19,6 +19,7 @@ import { User } from '../user/user.model';
 import { Otp } from '../otp/otp.model';
 import * as bcrypt from 'bcrypt';
 import { sendEmail } from 'src/services/send-email.service';
+import { WithdrawalMessage } from '../withdrawal-message/withdrawal-message.model';
 
 @Injectable()
 export class WalletService {
@@ -27,6 +28,8 @@ export class WalletService {
     @InjectModel(Gateway.name) private gatewayModel: Model<Gateway>,
     @InjectModel(Transaction.name) private transactionModel: Model<Transaction>,
     @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(WithdrawalMessage.name)
+    private withdrawalMessageModel: Model<WithdrawalMessage>,
     @InjectModel(Otp.name) private otpModel: Model<Otp>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly userRequest: UserRequestService,
@@ -71,6 +74,51 @@ export class WalletService {
       // console.log('user_id', user_id);
 
       const wallet = await this.walletModel.findOne({ name, user_id }).exec();
+      if (!wallet) {
+        throw new NotFoundException('Wallet with this name does not exist');
+      }
+      return {
+        success: true,
+        message: 'Wallet retrieved',
+        data: wallet,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
+  /**
+   * Get wallet by user id and wallet name - Admin endpoint
+   *
+   * @param user_id - string
+   * @param name - string
+   *
+   */
+
+  public async getByUserId(
+    user_id: mongoose.Types.ObjectId,
+    name: 'MAIN' | 'PROFIT',
+  ) {
+    try {
+      if (!name) {
+        throw new BadRequestException(`Name parameter required`);
+      }
+      if (name !== 'MAIN' && name !== 'PROFIT') {
+        throw new BadRequestException(`Invalid name provided`);
+      }
+      if (!mongoose.isValidObjectId(user_id)) {
+        throw new BadRequestException(`Invalid user_id provided required`);
+      }
+      // const user = this.userRequest.getUser();
+      // const user_id = req?.user._id;
+
+      // console.log('user_id', user_id);
+
+      const castedUserId = new mongoose.Types.ObjectId(user_id);
+
+      const wallet = await this.walletModel
+        .findOne({ name, user_id: castedUserId })
+        .exec();
       if (!wallet) {
         throw new NotFoundException('Wallet with this name does not exist');
       }
@@ -134,8 +182,8 @@ export class WalletService {
         throw new NotFoundException(`Wallet for this user not found`);
       }
 
-      const imageName = originalname.includes('.')
-        ? originalname.split('.')[0]
+      const imageName = originalname?.includes('.')
+        ? originalname?.split('.')?.[0]
         : originalname;
 
       const { url, alt_text, public_id } =
@@ -172,6 +220,25 @@ export class WalletService {
       const user = await this.userModel.findById(user_id);
       if (!user) {
         throw new NotFoundException('User does not exist');
+      }
+
+      const withdrawalMessage = await this.withdrawalMessageModel
+        .findOne({
+          user_id: user?._id,
+        })
+        .exec();
+
+      if (!withdrawalMessage) {
+        throw new BadRequestException(
+          'You are not verified to make withdrawals',
+        );
+      }
+
+      if (!user.verified || !user.paid_for_verification) {
+        throw new BadRequestException(
+          withdrawalMessage.message ??
+            'You are not verified to make withdrawals',
+        );
       }
 
       const { otpDoc: _, stringifiedOtp } =
@@ -259,6 +326,29 @@ export class WalletService {
 
       const user_id = req.user._id;
 
+      const userDoc = await this.userModel.findById(user_id);
+
+      if (!userDoc) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const withdrawalMessage = await this.withdrawalMessageModel.findOne({
+        user_id,
+      });
+
+      if (!withdrawalMessage) {
+        throw new BadRequestException(
+          'You are not verified to make withdrawals',
+        );
+      }
+
+      if (!userDoc.verified || !userDoc.paid_for_verification) {
+        throw new BadRequestException(
+          withdrawalMessage.message ??
+            'You are not verified to make withdrawals',
+        );
+      }
+
       const otpDoc = await this.otpModel.findOne({
         user_id,
         purpose: 'withdrawal',
@@ -302,12 +392,6 @@ export class WalletService {
         throw new BadRequestException(
           'Amount should be greater than $10 and less than $30,000',
         );
-      }
-
-      const userDoc = await this.userModel.findById(user_id);
-
-      if (!userDoc) {
-        throw new UnauthorizedException('User not found');
       }
 
       const comparedPassword = await bcrypt.compare(password, userDoc.password);

@@ -25,9 +25,8 @@ export class Otp {
 
   @Prop({
     required: true,
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Types.ObjectId,
     ref: User.name,
-    // unique: true,
   })
   user_id: mongoose.Types.ObjectId;
 
@@ -44,3 +43,6 @@ export class Otp {
 export type OtpDocument = Otp & Document;
 
 export const OtpSchema = SchemaFactory.createForClass(Otp);
+
+// Add a compound unique index to enforce one OTP per user and purpose
+OtpSchema.index({ user_id: 1, purpose: 1 }, { unique: true });

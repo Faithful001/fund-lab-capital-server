@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model } from 'mongoose';
+import mongoose, { Model, mongo } from 'mongoose';
 import { User } from './user.model';
 import * as bcrypt from 'bcrypt';
 import { handleApplicationError } from 'src/utils/handle-application-error.util';
@@ -20,12 +20,16 @@ import { Wallet } from '../wallet/wallet.model';
 import { Referral } from '../referral/referral.model';
 import { Generate } from 'src/utils/generate';
 import { Transform } from 'src/utils/transform';
-import { Transaction } from '../transaction/transaction.model';
+import { Transaction, TypeEnum } from '../transaction/transaction.model';
 import { sendBulkEmails, sendEmail } from 'src/services/send-email.service';
 import { Token } from 'src/enums/token.enum';
 import { OtpService } from '../otp/otp.service';
 import { Request } from 'express';
 import { Otp } from '../otp/otp.model';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { CloudinaryService } from 'src/services/cloudinary.service';
+import { KycDocument } from 'src/kyc-document/kyc-document.model';
+import { Gateway } from '../gateway/gateway.model';
 config();
 
 @Injectable()
@@ -34,10 +38,14 @@ export class UserService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Wallet.name) private readonly walletModel: Model<Wallet>,
     @InjectModel(Referral.name) private readonly referralModel: Model<Referral>,
+    @InjectModel(Gateway.name) private readonly gatewayModel: Model<Gateway>,
     @InjectModel(Otp.name) private readonly otpModel: Model<Otp>,
+    @InjectModel(KycDocument.name)
+    private readonly kycDocumentModel: Model<KycDocument>,
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
     private readonly otpService: OtpService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   // private generateToken(payload: string | mongoose.Types.ObjectId) {
@@ -127,22 +135,22 @@ export class UserService {
 
       // Generate a token
       // const token = this.generateToken(newUser._id);
-      const { otpDoc: _, stringifiedOtp } =
-        await this.otpService.createOrUpdate(
-          newUser._id,
-          'account-verification',
-        );
+      // const { otpDoc: _, stringifiedOtp } =
+      //   await this.otpService.createOrUpdate(
+      //     newUser._id,
+      //     'account-verification',
+      //   );
 
-      await sendEmail({
-        email: newUser.email,
-        subject: 'Account verification OTP',
-        message: `Your Otp for verification is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
-      });
+      // await sendEmail({
+      //   email: newUser.email,
+      //   subject: 'Account verification OTP',
+      //   message: `Your Otp for verification is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
+      // });
 
-      const fiveMinutes = 300000;
-      setTimeout(() => {
-        this.otpService.delete(newUser._id, 'account-verification');
-      }, fiveMinutes);
+      // const fiveMinutes = 300000;
+      // setTimeout(() => {
+      //   this.otpService.delete(newUser._id, 'account-verification');
+      // }, fiveMinutes);
 
       const { password, ...userWithoutPassword } = newUser.toObject();
       // const transformedUser = Transform.data(userWithoutPassword, [
@@ -159,38 +167,86 @@ export class UserService {
     }
   }
 
-  public async requestAccountVerificationOtp(user_id: mongoose.Types.ObjectId) {
+  public async payForAccountVerification(
+    req: Request,
+    files: { kyc: Express.Multer.File; transaction: Express.Multer.File },
+    amount: number,
+    gateway: string,
+  ) {
     try {
-      if (!user_id) {
-        throw new BadRequestException('The user_id field is required');
+      const user_id = req.user._id;
+
+      // Validate amount
+      if (!amount || !gateway) {
+        throw new BadRequestException(
+          'The amount and gateway fields are required',
+        );
+      }
+
+      // Validate files
+      if (!files.kyc || !files.transaction) {
+        throw new BadRequestException(
+          'Both KYC document and payment proof document are required',
+        );
       }
 
       if (!mongoose.isValidObjectId(user_id)) {
         throw new BadRequestException('Invalid user_id provided');
       }
 
+      // Fetch user
       const user = await this.userModel.findById(user_id).exec();
       if (!user) {
         throw new NotFoundException('User does not exist');
       }
 
-      const { otpDoc: _, stringifiedOtp } =
-        await this.otpService.createOrUpdate(user._id, 'account-verification');
+      const gatewayDoc = await this.gatewayModel.findOne({ name: gateway });
+      if (!gatewayDoc) {
+        throw new NotFoundException('Gateway does not exist');
+      }
 
-      await sendEmail({
-        email: user.email,
-        subject: 'Account verification OTP',
-        message: `Your Otp for verification is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
+      // Helper function to handle file upload
+      const uploadFile = async (
+        file: Express.Multer.File,
+        fileType: string,
+      ) => {
+        const { originalname, buffer } = file;
+        const imageName = originalname?.includes('.')
+          ? originalname.split('.')?.[0]
+          : originalname;
+
+        const { url, alt_text, public_id } =
+          await this.cloudinaryService.uploadStream(
+            `${fileType}-${imageName}`, // Prefix to distinguish file types
+            buffer,
+          );
+
+        return { url, alt_text, public_id };
+      };
+
+      // Upload KYC document
+      const kycUploadResult = await uploadFile(files.kyc, 'kyc');
+      await this.kycDocumentModel.create({
+        image: kycUploadResult,
+        user_id: user._id,
       });
 
-      const fiveMinutes = 300000;
-      setTimeout(() => {
-        this.otpService.delete(user._id, 'account-verification');
-      }, fiveMinutes);
+      // Upload transaction proof
+      const transactionUploadResult = await uploadFile(
+        files.transaction,
+        'transaction',
+      );
+      await this.transactionModel.create({
+        image: transactionUploadResult,
+        gateway_id: gatewayDoc._id,
+        type: TypeEnum.AccountVerification,
+        amount,
+        user_id: user._id,
+      });
 
       return {
         success: true,
-        message: 'OTP sent successfully',
+        message: 'Payment successful. We are processing your KYC',
         data: null,
       };
     } catch (error: any) {
@@ -284,6 +340,39 @@ export class UserService {
     }
   }
 
+  public async getUser(req: Request) {
+    try {
+      const user_id = req.user._id;
+
+      const user = await this.userModel.findById(user_id);
+      return {
+        success: true,
+        message: 'User retrieved',
+        data: user,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+  public async updateUser(req: Request, updateUserDto: UpdateUserDto) {
+    try {
+      const user_id = req.user._id;
+
+      const user = await this.userModel.findOneAndUpdate(
+        { _id: user_id },
+        { ...updateUserDto },
+        { new: true },
+      );
+      return {
+        success: true,
+        message: 'User updated successfully',
+        data: user,
+      };
+    } catch (error: any) {
+      handleApplicationError(error);
+    }
+  }
+
   public async verifyToken(token: string) {
     try {
       if (!token) {
@@ -299,9 +388,9 @@ export class UserService {
         throw new UnauthorizedException('Invalid token');
       }
 
-      if (!user.verified) {
-        throw new ForbiddenException('User is not verified');
-      }
+      // if (!user.verified) {
+      //   throw new ForbiddenException('User is not verified');
+      // }
       return {
         success: true,
         message: 'User is authorized',
@@ -346,19 +435,23 @@ export class UserService {
   public async findUsers(amount?: number) {
     try {
       let users: any;
+
       if (amount) {
         users = await this.userModel.find().limit(amount).exec();
+      } else {
+        users = await this.userModel.find();
       }
-      users = await this.userModel.find();
+
       return {
         success: true,
-        message: 'All users retrieved',
+        message: 'Users retrieved successfully',
         data: users,
       };
     } catch (error: any) {
       handleApplicationError(error);
     }
   }
+
   /*
    * Admin endpoint to get the total of all documents
    */

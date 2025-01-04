@@ -79,8 +79,8 @@ export class InvestmentService {
       }
 
       const { buffer, originalname } = file;
-      const imageName = originalname.includes('.')
-        ? originalname.split('.')[0]
+      const imageName = originalname?.includes('.')
+        ? originalname?.split('.')?.[0]
         : originalname;
 
       const { alt_text, public_id, url, thumbnail_url } =
