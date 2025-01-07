@@ -446,7 +446,7 @@ export class UserService {
 
       await sendEmail({
         email: user.email,
-        subject: 'Withdrawal OTP',
+        subject: 'Reset Password',
         message: `Your Otp for password reset is: ${stringifiedOtp}. \n Your Otp expires in 5 minutes.`,
       });
 
