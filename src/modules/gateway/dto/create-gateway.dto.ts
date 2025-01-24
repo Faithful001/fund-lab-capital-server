@@ -1,5 +1,23 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
+// class ImageDto {
+//   @IsNotEmpty()
+//   @IsString()
+//   url: string;
+
+//   @IsOptional()
+//   @IsString()
+//   alt_text?: string;
+
+//   @IsOptional()
+//   @IsString()
+//   thumbnail?: string;
+
+//   @IsOptional()
+//   @IsString()
+//   public_id?: string;
+// }
+
 export class CreateGatewayDto {
   @IsString()
   @IsNotEmpty()
@@ -9,11 +27,14 @@ export class CreateGatewayDto {
   @IsNotEmpty()
   wallet_address: string;
 
-  @IsNumber()
-  @IsOptional()
-  charge: number;
+  // @IsNotEmpty()
+  // image: ImageDto;
 
-  @IsNumber()
+  @IsString()
   @IsOptional()
-  conversion_rate: number;
+  charge: string;
+
+  @IsString()
+  @IsOptional()
+  conversion_rate: string;
 }

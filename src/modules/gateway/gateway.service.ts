@@ -12,32 +12,57 @@ import mongoose, { Model } from 'mongoose';
 import { CreateGatewayDto } from './dto/create-gateway.dto';
 import { UpdateGatewayDto } from './dto/update-gateway.dto';
 import { Request } from 'express';
+import { CloudinaryService } from 'src/services/cloudinary.service';
 
 @Injectable()
 export class GatewayService {
   constructor(
     @InjectModel(Gateway.name)
     private readonly gatewayModel: Model<Gateway>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  public async create(createGatewayDto: CreateGatewayDto) {
+  public async create(
+    file: Express.Multer.File,
+    createGatewayDto: CreateGatewayDto,
+  ) {
     try {
       const { name, wallet_address, charge, conversion_rate } =
         createGatewayDto;
+
+      console.log('create method reached');
+
+      if (!file) {
+        throw new BadRequestException('Image file is required');
+      }
       if (!name || !wallet_address) {
         throw new BadRequestException(
           'The name and wallet_wallet_address fields required',
         );
       }
-      if (charge < 1) {
+      if (charge && Number(charge) < 1) {
         throw new BadRequestException('charge must be a positive integer');
       }
+
+      const { buffer, originalname } = file;
+      const imageName = originalname?.includes('.')
+        ? originalname?.split('.')?.[0]
+        : originalname;
+
+      const { alt_text, public_id, url, thumbnail_url } =
+        await this.cloudinaryService.uploadStream(imageName, buffer, true);
 
       const gatewayDoc = await this.gatewayModel.create({
         name,
         wallet_address,
-        charge,
-        conversion_rate,
+        charge: charge && Number(charge),
+        conversion_rate: conversion_rate && Number(conversion_rate),
+        image: {
+          alt_text,
+          public_id,
+          url,
+          thumbnail_url,
+        },
       });
 
       return {
@@ -108,27 +133,52 @@ export class GatewayService {
     }
   }
 
-  public async update(id: string, body: UpdateGatewayDto) {
+  public async update(
+    id: string,
+    body: UpdateGatewayDto,
+    file?: Express.Multer.File,
+  ) {
     try {
+      // Validate the ID format
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new BadRequestException(`Invalid ID format: ${id}`);
       }
 
+      // Object to hold the updated fields
+      const updatedFields: any = { ...body };
+
+      // If a file is provided, process the image upload
+      if (file) {
+        const { buffer, originalname } = file;
+
+        const imageName = originalname.includes('.')
+          ? originalname.split('.')[0]
+          : originalname;
+
+        const { alt_text, public_id, url, thumbnail_url } =
+          await this.cloudinaryService.uploadStream(imageName, buffer, true);
+
+        updatedFields.image = { alt_text, public_id, url, thumbnail_url };
+      }
+
       const updatedGateway = await this.gatewayModel.findByIdAndUpdate(
         id,
-        { ...body },
+        updatedFields,
         { new: true },
       );
 
       if (!updatedGateway) {
         throw new NotFoundException(`No gateway found with the id: ${id}`);
       }
+
+      // Return a success response
       return {
         success: true,
         message: 'Update successful',
         data: updatedGateway,
       };
     } catch (error: any) {
+      // Handle and rethrow application-specific errors
       handleApplicationError(error);
     }
   }

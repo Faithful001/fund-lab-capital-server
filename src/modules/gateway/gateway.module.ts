@@ -5,6 +5,7 @@ import { GatewayService } from './gateway.service';
 import { GatewayController } from './gateway.controller';
 import { UserModule } from '../user/user.module';
 import { AdminModule } from '../admin/admin.module';
+import { CloudinaryService } from 'src/services/cloudinary.service';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { AdminModule } from '../admin/admin.module';
     AdminModule,
   ],
   controllers: [GatewayController],
-  providers: [GatewayService],
+  providers: [GatewayService, CloudinaryService],
 })
 export class GatewayModule {}
